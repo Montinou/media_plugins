@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "example": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"],
+      "note": "Servidor local sin dependencias de pip: JSON-RPC sobre stdio con la stdlib. Renombrá la clave y el SERVER_NAME al adaptarlo."
+    }
+  }
+}

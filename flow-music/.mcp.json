@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "flow-music": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
+      ],
+      "env": {
+        "FLOWMUSIC_MIN_INTERVAL": "2.5"
+      },
+      "note": "Servidor local sin dependencias de pip: JSON-RPC sobre stdio con la stdlib. Requiere una sesión de www.flowmusic.app en ~/.config/flowmusic/cookies.json, en la raíz del proyecto como www.flowmusic.app.cookies.json, o en FLOWMUSIC_COOKIES. FLOWMUSIC_MIN_INTERVAL fija el piso de segundos entre requests: no lo bajes de 2.5 sin motivo."
+    }
+  }
+}

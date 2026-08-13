@@ -1,0 +1,9 @@
+{
+  "name": "example",
+  "version": "0.1.0",
+  "description": "Plantilla de plugin para un servicio con sesión de navegador. Copiala y renombrá: el core es genérico, lo específico de tu proyecto va en packs/.",
+  "author": { "name": "tu nombre" },
+  "license": "MIT",
+  "keywords": ["template", "mcp"],
+  "commands": ["./commands/auth.md"]
+}

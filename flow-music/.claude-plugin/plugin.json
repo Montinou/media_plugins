@@ -1,0 +1,22 @@
+{
+  "name": "flow-music",
+  "version": "0.1.0",
+  "description": "Puente a Google Flow Music: cuenta y créditos, catálogo de canciones, y descarga de stems (bass incluido) por la API. Incluye MCP server, precondición de autenticación y guía de comportamiento.",
+  "author": {
+    "name": "Montinou"
+  },
+  "repository": "https://github.com/Montinou/media_plugins",
+  "license": "MIT",
+  "keywords": [
+    "flowmusic",
+    "riffusion",
+    "music",
+    "stems",
+    "audio",
+    "mcp"
+  ],
+  "commands": [
+    "./commands/auth.md",
+    "./commands/stems.md"
+  ]
+}

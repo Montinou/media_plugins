@@ -1,0 +1,24 @@
+{
+  "name": "suno",
+  "version": "0.1.0",
+  "description": "Operar Suno con criterio: Studio 2.0 (DAW multipista y export de stems), generación fuera del Studio, y verificación local de lo descargado. MCP sin red por diseño; la operación va por navegador.",
+  "author": {
+    "name": "Montinou"
+  },
+  "repository": "https://github.com/Montinou/media_plugins",
+  "license": "MIT",
+  "keywords": [
+    "suno",
+    "music",
+    "stems",
+    "studio",
+    "daw",
+    "audio",
+    "mcp",
+    "browser"
+  ],
+  "commands": [
+    "./commands/auth.md",
+    "./commands/stems.md"
+  ]
+}
