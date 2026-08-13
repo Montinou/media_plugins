@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 PROTOCOL_VERSION = "2025-06-18"
-SERVER_NAME = "aerthos-flow"
+SERVER_NAME = "google-flow"
 SERVER_VERSION = "0.1.0"
 
 
@@ -36,8 +36,8 @@ def _resolve_lib() -> Path:
     `tools/flow`.
     """
     candidates = []
-    if os.environ.get("AERTHOS_FLOW_LIB"):
-        candidates.append(Path(os.environ["AERTHOS_FLOW_LIB"]))
+    if os.environ.get("FLOW_LIB"):
+        candidates.append(Path(os.environ["FLOW_LIB"]))
     candidates.append(Path(__file__).resolve().parent.parent / "lib")
     root = os.environ.get("CLAUDE_PLUGIN_ROOT")
     if root:
@@ -51,7 +51,7 @@ def _resolve_lib() -> Path:
     raise RuntimeError(
         "No encuentro las bibliotecas de Flow (flow_client.py). Probé: "
         + ", ".join(str(c) for c in candidates)
-        + ". Definí AERTHOS_FLOW_LIB con la ruta correcta."
+        + ". Definí FLOW_LIB con la ruta correcta."
     )
 
 
@@ -60,6 +60,7 @@ sys.path.insert(0, str(LIB))
 
 import flow_client  # noqa: E402
 import flow_driver  # noqa: E402
+import flow_packs  # noqa: E402
 import flow_upscale  # noqa: E402
 
 
@@ -90,10 +91,23 @@ def tool(name: str, description: str, schema: dict, **annotations):
 
 
 def _out_dir(sub: str) -> Path:
-    base = Path(os.environ.get("AERTHOS_FLOW_OUT", Path.cwd() / "flow-out"))
+    base = Path(os.environ.get("FLOW_OUT", Path.cwd() / "flow-out"))
     d = base / sub
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+
+def _resolve_recipe(args: dict) -> dict:
+    """Acepta la receta inline o el nombre de una del pack activo."""
+    if args.get("recipe"):
+        return args["recipe"]
+    if args.get("recipe_name"):
+        return flow_packs.load_recipe(args["recipe_name"])
+    raise ValueError(
+        "hace falta 'recipe' (objeto) o 'recipe_name' (del pack). "
+        "Las recetas del pack se listan con flow_pack_info."
+    )
 
 
 # --------------------------------------------------------------------- tools
@@ -182,7 +196,7 @@ def _list_applets(args: dict) -> dict:
 @tool(
     "flow_get_applet_code",
     "Descarga el código fuente de un applet de Flow y lo guarda en "
-    "flow-applets/<appletId>/ (o AERTHOS_FLOW_APPLETS). Devuelve los archivos y, si existe, el "
+    "flow-applets/<appletId>/ (o FLOW_APPLETS). Devuelve los archivos y, si existe, el "
     "contenido de constants.ts, que es donde viven los valores válidos de los "
     "dropdowns necesarios para escribir recetas. Para saber qué controles expone "
     "la UI, usar flow_inspect_controls.",
@@ -209,7 +223,7 @@ def _get_applet_code(args: dict) -> dict:
     applet_id = args["applet_id"]
     data = flow_client.get_applet(applet_id)
     dest = Path(
-        os.environ.get("AERTHOS_FLOW_APPLETS", Path.cwd() / "flow-applets")
+        os.environ.get("FLOW_APPLETS", Path.cwd() / "flow-applets")
     ) / applet_id
     dest.mkdir(parents=True, exist_ok=True)
 
@@ -275,18 +289,26 @@ def _inspect_controls(args: dict) -> dict:
                 "type": "object",
                 "description": "Receta completa. Ver la referencia de recetas del "
                 "skill flow-assets para el esquema.",
-            }
+            },
+            "recipe_name": {
+                "type": "string",
+                "description": "Alternativa a 'recipe': nombre de una receta del "
+                "pack activo, listadas por flow_pack_info.",
+            },
         },
-        "required": ["recipe"],
     },
     title="Dryrun de receta (sin costo)",
     readOnlyHint=True,
     openWorldHint=True,
 )
 def _dryrun(args: dict) -> dict:
-    recipe = args["recipe"]
+    recipe = _resolve_recipe(args)
     with flow_driver.FlowDriver(headless=True) as drv:
-        drv.open(recipe["appletId"], timeout=recipe.get("loadTimeoutMs", 90000))
+        drv.open(
+            recipe["appletId"],
+            timeout=recipe.get("loadTimeoutMs", 90000),
+            project_id=recipe.get("projectId"),
+        )
         flow_driver.apply_controls(drv, recipe)
         return {
             "ok": True,
@@ -307,19 +329,23 @@ def _dryrun(args: dict) -> dict:
                 "type": "object",
                 "description": "Receta con appletId, generateButton y controls.",
             },
+            "recipe_name": {
+                "type": "string",
+                "description": "Alternativa a 'recipe': nombre de una receta del "
+                "pack activo.",
+            },
             "out_dir": {
                 "type": "string",
                 "description": "Carpeta destino. Default work/flow-mcp/single.",
             },
         },
-        "required": ["recipe"],
     },
     title="Generar una imagen",
     readOnlyHint=False,
     openWorldHint=True,
 )
 def _generate(args: dict) -> dict:
-    recipe = args["recipe"]
+    recipe = _resolve_recipe(args)
     out = Path(args["out_dir"]) if args.get("out_dir") else _out_dir("single")
     meta = flow_driver.run_recipe(recipe, out, headless=True)
     return {
@@ -344,6 +370,11 @@ def _generate(args: dict) -> dict:
                 "description": "Receta con 'matrix': un objeto que mapea cada "
                 "label de dropdown a la lista de valores a recorrer.",
             },
+            "recipe_name": {
+                "type": "string",
+                "description": "Alternativa a 'recipe': nombre de una receta del "
+                "pack activo.",
+            },
             "out_dir": {
                 "type": "string",
                 "description": "Carpeta destino. Default work/flow-mcp/batch.",
@@ -355,14 +386,13 @@ def _generate(args: dict) -> dict:
                 "minimum": 1,
             },
         },
-        "required": ["recipe"],
     },
     title="Generar en batch",
     readOnlyHint=False,
     openWorldHint=True,
 )
 def _batch(args: dict) -> dict:
-    recipe = args["recipe"]
+    recipe = _resolve_recipe(args)
     out = Path(args["out_dir"]) if args.get("out_dir") else _out_dir("batch")
     results = flow_driver.run_batch(
         recipe, out, headless=True, limit=args.get("limit")
@@ -474,6 +504,97 @@ def _upscale_native(args: dict) -> dict:
             "cost": (before - after) if None not in (before, after) else None,
         },
     }
+
+
+
+@tool(
+    "flow_pack_info",
+    "Describe el pack activo: proyecto de Flow, herramientas registradas con sus "
+    "controles y vocabularios, y recetas disponibles. Un pack es la parte propia "
+    "de cada cuenta (projectId, appletIds, valores de dropdown); el resto del "
+    "plugin es genérico. Si no hay pack, explica cómo generar uno.",
+    {"properties": {}},
+    title="Pack activo",
+    readOnlyHint=True,
+    openWorldHint=False,
+)
+def _pack_info(args: dict) -> dict:
+    pack = flow_packs.load_pack()
+    if pack is None:
+        return {
+            "pack": None,
+            "note": "No hay pack activo. Generá uno con flow_scaffold_pack, o "
+            "apuntá FLOW_PACK a un directorio que tenga pack.json. Sin pack, "
+            "las tools que abren un applet necesitan project_id explícito.",
+        }
+    applets = {
+        slug: {
+            "appletId": a["appletId"],
+            "displayName": a.get("displayName"),
+            "generateButton": a.get("generateButton"),
+            "controls": a.get("controls"),
+            "vocabulary": a.get("vocabulary"),
+        }
+        for slug, a in (pack.get("applets") or {}).items()
+    }
+    return {
+        "name": pack.get("name"),
+        "projectId": pack.get("projectId"),
+        "dir": pack.get("_dir"),
+        "applets": applets,
+        "recipes": flow_packs.list_recipes(),
+    }
+
+
+@tool(
+    "flow_scaffold_pack",
+    "Genera un pack para la cuenta actual: descubre el proyecto de Flow, lista "
+    "las herramientas propias, baja su código y extrae de constants.ts los "
+    "valores válidos de cada dropdown, dejando pack.json, applets.md y una "
+    "receta inicial por herramienta. Es el punto de partida para usar el plugin "
+    "con una cuenta nueva. No genera imágenes ni gasta créditos.",
+    {
+        "properties": {
+            "dest": {
+                "type": "string",
+                "description": "Directorio donde escribir el pack. Se crea si no "
+                "existe. Ej: ./mi-pack o ~/.config/google-flow/packs/mio.",
+            },
+            "name": {
+                "type": "string",
+                "description": "Nombre del pack, para identificarlo.",
+            },
+            "project_id": {
+                "type": "string",
+                "description": "projectId de Flow. Si se omite se descubre "
+                "abriendo la app en un browser.",
+            },
+            "filter": {
+                "type": "string",
+                "description": "Incluir sólo las herramientas cuyo nombre o "
+                "descripción contenga esta subcadena.",
+            },
+            "include_community": {
+                "type": "boolean",
+                "description": "Incluir también applets de la comunidad. Default "
+                "false: un pack describe las herramientas propias.",
+            },
+        },
+        "required": ["dest", "name"],
+    },
+    title="Generar un pack para esta cuenta",
+    readOnlyHint=False,
+    openWorldHint=True,
+)
+def _scaffold_pack(args: dict) -> dict:
+    return flow_packs.scaffold(
+        dest=Path(args["dest"]).expanduser(),
+        name=args["name"],
+        project_id_value=args.get("project_id"),
+        applet_filter=args.get("filter"),
+        mine_only=not args.get("include_community", False),
+        headless=True,
+    )
 
 
 # ---------------------------------------------------------------- JSON-RPC

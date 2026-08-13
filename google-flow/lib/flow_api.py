@@ -40,7 +40,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, str(Path(__file__).parent))
-from flow_client import PROJECT_ID, access_token, load_cookies_for_playwright, sandbox  # noqa: E402
+import flow_packs  # noqa: E402
+from flow_client import access_token, load_cookies_for_playwright, sandbox  # noqa: E402
 
 SITE_KEY = "6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV"
 SANDBOX = "https://aisandbox-pa.googleapis.com/v1"
@@ -58,11 +59,11 @@ class FlowPageAPI:
     def __init__(
         self,
         headless: bool = True,
-        project_id: str = PROJECT_ID,
+        project_id: str | None = None,
         cdp: str | None = None,
     ):
         self.headless = headless
-        self.project_id = project_id
+        self.project_id = flow_packs.project_id(project_id)
         self.cdp = cdp
         self._pw = None
         self.browser = None

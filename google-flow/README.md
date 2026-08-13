@@ -1,4 +1,4 @@
-# aerthos-flow
+# google-flow
 
 Plugin de Claude Code para producir assets con [Google Labs
 Flow](https://labs.google/fx/tools/flow): un MCP server con las tools y una
@@ -12,22 +12,22 @@ protocolo.
 
 ```
 /plugin marketplace add Montinou/media_plugins
-/plugin install aerthos-flow@media-plugins
+/plugin install google-flow@media-plugins
 ```
 
 Después, las credenciales:
 
 ```bash
-mkdir -p ~/.config/aerthos-flow
+mkdir -p ~/.config/google-flow
 # exportar las cookies de labs.google desde el navegador a:
-#   ~/.config/aerthos-flow/labs.google.cookies.json
-chmod 600 ~/.config/aerthos-flow/labs.google.cookies.json
+#   ~/.config/google-flow/labs.google.cookies.json
+chmod 600 ~/.config/google-flow/labs.google.cookies.json
 ```
 
 Y verificar:
 
 ```bash
-python3 aerthos-flow/doctor.py
+python3 google-flow/doctor.py
 ```
 
 El doctor revisa dependencias, Chrome, credenciales y el handshake del MCP, y
@@ -78,18 +78,18 @@ python3 lib/flow_upscale.py flow-out/ -f 2
 ```
 
 Las salidas van al cwd (`flow-out/`, `flow-applets/`) salvo que se definan
-`FLOW_OUT`, `AERTHOS_FLOW_OUT` o `AERTHOS_FLOW_APPLETS`.
+`FLOW_OUT`, `FLOW_OUT` o `FLOW_APPLETS`.
 
 ## Configuración
 
 | Variable | Para qué |
 |---|---|
 | `FLOW_COOKIES` | Ruta al archivo de cookies |
-| `FLOW_CONFIG_DIR` | Directorio de config (default `~/.config/aerthos-flow`) |
+| `FLOW_CONFIG_DIR` | Directorio de config (default `~/.config/google-flow`) |
 | `FLOW_PROJECT_ID` | Proyecto de Flow a usar |
-| `AERTHOS_FLOW_OUT` | Carpeta de salida de las tools de MCP |
-| `AERTHOS_FLOW_APPLETS` | Dónde guardar el código de applets descargado |
-| `AERTHOS_FLOW_LIB` | Apuntar a otro checkout de `lib/` (desarrollo) |
+| `FLOW_OUT` | Carpeta de salida de las tools de MCP |
+| `FLOW_APPLETS` | Dónde guardar el código de applets descargado |
+| `FLOW_LIB` | Apuntar a otro checkout de `lib/` (desarrollo) |
 
 ## Lo que no hace
 

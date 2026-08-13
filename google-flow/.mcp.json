@@ -1,10 +1,12 @@
 {
   "mcpServers": {
-    "aerthos-flow": {
+    "google-flow": {
       "type": "stdio",
       "command": "python3",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"],
-      "note": "Servidor local sin dependencias de pip: habla JSON-RPC sobre stdio con la stdlib. Necesita playwright, requests y pillow en el python3 del sistema, Google Chrome instalado, y las cookies de labs.google en ~/.config/aerthos-flow/labs.google.cookies.json (o FLOW_COOKIES)."
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
+      ],
+      "note": "Servidor local sin dependencias de pip: JSON-RPC sobre stdio con la stdlib. Necesita playwright, requests y pillow en el python3 del sistema, Google Chrome instalado, y las cookies de labs.google en ~/.config/google-flow/labs.google.cookies.json (o FLOW_COOKIES). El core no depende de ningún proyecto: lo específico va en packs/."
     }
   }
 }

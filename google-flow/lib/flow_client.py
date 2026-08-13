@@ -26,10 +26,23 @@ from pathlib import Path
 
 import requests
 
-CONFIG_DIR = Path(
-    os.environ.get("FLOW_CONFIG_DIR", Path.home() / ".config" / "aerthos-flow")
-)
 COOKIE_NAME = "labs.google.cookies.json"
+
+# El plugin se llamaba `aerthos-flow` antes de volverse genérico. Preferimos el
+# nombre nuevo, pero seguimos leyendo el viejo para no romper instalaciones que
+# ya tienen las cookies puestas.
+_CONFIG_CANDIDATES = [
+    Path.home() / ".config" / "google-flow",
+    Path.home() / ".config" / "aerthos-flow",
+]
+
+if _env := os.environ.get("FLOW_CONFIG_DIR"):
+    CONFIG_DIR = Path(_env)
+else:
+    CONFIG_DIR = next(
+        (d for d in _CONFIG_CANDIDATES if (d / COOKIE_NAME).is_file()),
+        _CONFIG_CANDIDATES[0],
+    )
 
 
 def _find_cookies() -> Path:
@@ -54,7 +67,9 @@ COOKIE_PATH = _find_cookies()
 TOKEN_CACHE = Path(
     os.environ.get("FLOW_TOKEN_CACHE", CONFIG_DIR / ".flow-token.json")
 )
-PROJECT_ID = os.environ.get("FLOW_PROJECT_ID", "11111111-1111-1111-1111-111111111111")
+# Sin default: el proyecto es de cada cuenta. Lo resuelve flow_packs.project_id(),
+# que mira el entorno y el pack activo.
+PROJECT_ID = os.environ.get("FLOW_PROJECT_ID")
 
 LABS = "https://labs.google/fx"
 SANDBOX = "https://aisandbox-pa.googleapis.com/v1"
@@ -211,9 +226,13 @@ def get_applet(applet_id: str, version_id: str | None = None) -> dict:
     return sandbox("GET", f"flowAppletAgent/applets/{applet_id}/versions/{version_id}")
 
 
-def creation_sessions() -> dict:
+def creation_sessions(project_id: str | None = None) -> dict:
+    import flow_packs
+
     return sandbox(
-        "GET", "flowCreationAgent/sessions", params={"projectId": PROJECT_ID}
+        "GET",
+        "flowCreationAgent/sessions",
+        params={"projectId": flow_packs.project_id(project_id)},
     )
 
 

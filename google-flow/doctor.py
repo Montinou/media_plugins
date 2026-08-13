@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verifica que el plugin tenga todo lo que necesita para funcionar.
 
-    python3 aerthos-flow/doctor.py
+    python3 google-flow/doctor.py
 
 Revisa dependencias, Chrome, credenciales y el handshake del MCP, y explica qué
 hacer con cada cosa que falte. No genera nada ni gasta créditos.
@@ -30,7 +30,7 @@ def check(label: str, ok: bool, detail: str = "", fix: str = "", warn: bool = Fa
 
 
 def main() -> int:
-    print(f"aerthos-flow doctor\n{'-' * 60}")
+    print(f"google-flow doctor\n{'-' * 60}")
 
     print(f"\npython {sys.version.split()[0]} ({sys.executable})")
     for mod, pkg in [("playwright", "playwright"), ("requests", "requests"), ("PIL", "pillow")]:

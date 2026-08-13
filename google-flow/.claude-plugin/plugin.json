@@ -1,11 +1,11 @@
 {
-  "name": "aerthos-flow",
-  "version": "0.1.0",
-  "description": "Puente a Google Labs Flow: listar y leer las herramientas propias, generar assets en batch conduciendo los applets, y upscalear sin costo. Incluye MCP server y guías de uso.",
+  "name": "google-flow",
+  "version": "0.2.0",
+  "description": "Google Labs Flow desde Claude Code: catálogo de herramientas, generación en batch conduciendo los applets, y upscale local. Genérico: los ids de cada cuenta viven en packs.",
   "author": {
     "name": "Montinou"
   },
-  "repository": "https://github.com/Montinou/Aerthos-moollm",
+  "repository": "https://github.com/Montinou/media_plugins",
   "license": "MIT",
   "keywords": [
     "google-labs",
@@ -15,7 +15,6 @@
     "sprites",
     "playwright",
     "mcp",
-    "aerthos",
     "gamedev"
   ]
 }

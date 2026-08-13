@@ -56,8 +56,11 @@ POLL_RESULT_S = 4      # cada cuánto se mira si ya salió la imagen
 
 
 
-def applet_url(applet_id: str, project_id: str = PROJECT_ID) -> str:
-    return f"https://labs.google/fx/tools/flow/project/{project_id}/tool/{applet_id}"
+def applet_url(applet_id: str, project_id: str | None = None) -> str:
+    import flow_packs
+
+    pid = flow_packs.project_id(project_id)
+    return f"https://labs.google/fx/tools/flow/project/{pid}/tool/{applet_id}"
 
 
 class FlowDriver:
@@ -102,8 +105,11 @@ class FlowDriver:
 
     # ---------------------------------------------------------------- montaje
 
-    def open(self, applet_id: str, timeout: int = 90000) -> Frame:
-        self.page.goto(applet_url(applet_id), wait_until="networkidle", timeout=timeout)
+    def open(
+        self, applet_id: str, timeout: int = 90000, project_id: str | None = None
+    ) -> Frame:
+        url = applet_url(applet_id, project_id)
+        self.page.goto(url, wait_until="networkidle", timeout=timeout)
         return self.wait_for_applet()
 
     def wait_for_applet(self, timeout: float = 90.0) -> Frame:
@@ -355,7 +361,11 @@ def dryrun_recipe(recipe: dict, headless: bool) -> None:
     """Setea todos los controles pero NO dispara la generación: cero costo."""
     with FlowDriver(headless=headless) as drv:
         print(f"→ abriendo applet {recipe['appletId']}")
-        drv.open(recipe["appletId"], timeout=recipe.get("loadTimeoutMs", 90000))
+        drv.open(
+            recipe["appletId"],
+            timeout=recipe.get("loadTimeoutMs", 90000),
+            project_id=recipe.get("projectId"),
+        )
         print("→ applet montado")
         apply_controls(drv, recipe)
         print("\n→ estado final de los controles (sin generar):")
@@ -471,7 +481,11 @@ def run_batch(
 
     results = []
     with FlowDriver(headless=headless) as drv:
-        drv.open(recipe["appletId"], timeout=recipe.get("loadTimeoutMs", 90000))
+        drv.open(
+            recipe["appletId"],
+            timeout=recipe.get("loadTimeoutMs", 90000),
+            project_id=recipe.get("projectId"),
+        )
         print("→ applet montado\n")
 
         for i, variant in enumerate(variants, 1):

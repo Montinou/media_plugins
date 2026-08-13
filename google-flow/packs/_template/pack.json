@@ -1,0 +1,33 @@
+{
+  "name": "_template",
+  "description": "Esqueleto de pack. Copiar este directorio y completar, o generar todo con flow_scaffold_pack.",
+
+  "_projectId": "Está en la URL de Flow: labs.google/fx/tools/flow/project/<AQUÍ>/tool/...",
+  "projectId": "00000000-0000-0000-0000-000000000000",
+
+  "_applets": "Una entrada por herramienta. La clave es un slug tuyo; lo que importa es appletId.",
+  "applets": {
+    "mi-herramienta": {
+      "appletId": "11111111-1111-1111-1111-111111111111",
+      "displayName": "Mi Herramienta",
+      "description": "Qué produce, en una línea",
+
+      "_generateButton": "Texto exacto del botón de acción, como se ve en la UI. Sacarlo de flow_inspect_controls, no del código.",
+      "generateButton": "GENERAR",
+
+      "_controls": "label es el texto que precede al valor en el control; current es el valor por defecto.",
+      "controls": [
+        { "type": "dropdown", "label": "Estilo", "current": "Realista" },
+        { "type": "text", "placeholder": "Describí la escena" }
+      ],
+
+      "_vocabulary": "Valores válidos de cada dropdown, extraídos de constants.ts del applet.",
+      "vocabulary": {
+        "ESTILOS": ["Realista", "Pixel art", "Acuarela"]
+      },
+
+      "_disabledActions": "Acciones que arrancan deshabilitadas. Si incluye el botón de generar, el applet necesita un insumo previo y no es automatizable todavía.",
+      "disabledActions": []
+    }
+  }
+}

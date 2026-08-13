@@ -65,45 +65,17 @@ Ojo con las subcadenas: `"Acción"` está contenido en `"Fa`**`cción`**` /
 Linaje"`. El driver ancla el label al inicio del texto del control justamente
 por eso, pero si dos controles empiezan igual hay que usar el label completo.
 
-## Vocabularios de los applets de Aerthos
+## De dónde salen los vocabularios
 
-### AERTHOS Sprite Forge · `00000000-0000-0000-0000-000000000000`
+Los valores válidos de cada dropdown los definió quien creó el applet, así que
+no están en este plugin: viven en el pack de cada cuenta.
 
-Botón: `FORJAR GRILLA 8 DIRECCIONES`
+- `flow_pack_info` los devuelve para las herramientas registradas
+- `applets.md` de cada pack los lista en prosa
+- `flow_get_applet_code` trae el `constants.ts` de cualquier applet
 
-| Label | Valores |
-|---|---|
-| `Facción / Linaje` | Imperio de Aethelria · Clanes de Crkds · Reino de Eldoria · Enanos de Grimstone · Imperio Syl'theri · Orcos de Espina Negra · Tejedores de Ecos |
-| `Acción` | Reposo / Idle · En Guardia · Atacando con arma · Caminando |
-| `Fondo Chroma` | Magenta puro · Verde puro |
-
-Campo de texto: placeholder `Capa desgarrada, espada curva…` para detalles
-físicos del personaje.
-
-Salida: grilla 4×2 con las 8 direcciones (0° front, 45°, 90°, 135°, 180°, 225°,
-270°, 315°) sobre chroma plano, 1376×768.
-
-### Map Asset Layer Forge · `00000000-0000-0000-0000-000000000000`
-
-| Label | Valores |
-|---|---|
-| `Aspect Ratio` | 16:9 · 1:1 · 4:3 · 3:2 · 9:16 · Igual al mapa |
-| `Fondo Chroma` | Magenta puro · Verde puro |
-| `Tipo de elementos` | Automático · Naturaleza · Arquitectura / Props · Gameplay · Ruinas · Mixto |
-| `Margen de Colisión` | Preciso · Normal · Amplio |
-
-Campos de texto: `Indicaciones: mercado, vegetación…` y, en modo colisión,
-`Ej: el río no es transitable…`.
-
-Tiene dos modos de salida (capa de assets / mapa de colisión) y **acepta una
-imagen de referencia**. Subir referencias todavía no está implementado en el
-driver, así que el modo que parte de un mapa existente no es automatizable aún.
-
-### Aerthos Map Compiler · `00000000-0000-0000-0000-000000000000`
-
-Produce las capas técnicas de un mapa: occlusion mask, height map, surface
-material, gameplay semantic. **Arranca de una imagen subida**, así que depende
-del upload de referencias que falta implementar.
+Si un dropdown no aparece en el pack, `flow_inspect_controls` muestra su label
+y el valor seleccionado, que sirve de punto de partida.
 
 ## Verificar antes de gastar tiempo
 

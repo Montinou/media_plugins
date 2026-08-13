@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Plugins para producir audio e imagen con herramientas de IA que no exponen API pública",
-    "version": "0.1.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
-      "name": "aerthos-flow",
-      "source": "./aerthos-flow",
-      "description": "Google Labs Flow: listar y leer las herramientas propias, generar assets en batch conduciendo los applets, y upscalear sin costo. Incluye MCP server y guías de uso.",
+      "name": "google-flow",
+      "source": "./google-flow",
+      "description": "Google Labs Flow: leer y conducir los applets propios, generar assets en batch y upscalear sin costo. Core genérico; lo específico de cada proyecto vive en packs/.",
       "author": {
         "name": "Montinou"
       },
@@ -26,6 +26,43 @@
         "playwright",
         "mcp",
         "gamedev"
+      ]
+    },
+    {
+      "name": "flow-music",
+      "source": "./flow-music",
+      "description": "Google Flow Music: cuenta y créditos, catálogo de canciones y descarga de stems —el de bass incluido— por la API. MCP server, precondición de autenticación y guía de comportamiento.",
+      "author": {
+        "name": "Montinou"
+      },
+      "repository": "https://github.com/Montinou/media_plugins",
+      "license": "MIT",
+      "keywords": [
+        "flowmusic",
+        "riffusion",
+        "music",
+        "stems",
+        "audio",
+        "mcp"
+      ]
+    },
+    {
+      "name": "suno",
+      "source": "./suno",
+      "description": "Suno con criterio: Studio 2.0 (DAW multipista y export de stems en WAV), operación por navegador y verificación local de lo descargado. El MCP no toca la red por diseño.",
+      "author": {
+        "name": "Montinou"
+      },
+      "repository": "https://github.com/Montinou/media_plugins",
+      "license": "MIT",
+      "keywords": [
+        "suno",
+        "music",
+        "stems",
+        "studio",
+        "daw",
+        "browser",
+        "mcp"
       ]
     }
   ]
