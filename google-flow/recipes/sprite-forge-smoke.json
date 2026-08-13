@@ -1,0 +1,17 @@
+{
+  "name": "smoke-aethelria-guardia",
+  "appletId": "00000000-0000-0000-0000-000000000000",
+  "_comment": "Prueba de humo del driver: AERTHOS Sprite Forge, grilla 8 direcciones.",
+  "generateButton": "FORJAR GRILLA 8 DIRECCIONES",
+  "generateTimeoutSec": 420,
+  "controls": [
+    { "type": "dropdown", "label": "Facción / Linaje", "value": "Imperio de Aethelria" },
+    { "type": "dropdown", "label": "Acción", "value": "En Guardia" },
+    { "type": "dropdown", "label": "Fondo Chroma", "value": "Magenta puro" },
+    {
+      "type": "text",
+      "placeholder": "Capa desgarrada",
+      "value": "guardia imperial, armadura de placas de acero e marfil, capa roja imperial corta, lanza ceremonial"
+    }
+  ]
+}

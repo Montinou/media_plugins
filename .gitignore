@@ -1,0 +1,21 @@
+# Credenciales de sesión — NUNCA commitear
+*.cookies.json
+*cookies*.json
+.flow-token.json
+*.token.json
+.secrets/
+.env
+.env.*
+
+# Salidas de generación
+flow-out/
+flow-applets/
+work/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
