@@ -374,8 +374,10 @@ def scaffold(
             notes.append(
                 "Actions disabled on open: "
                 + ", ".join(f"`{b}`" for b in blocked)
-                + ". They usually need a prior input, like an uploaded "
-                "image, so this applet may not be automatable yet.\n"
+                + ". They usually want a source image. That's met by picking "
+                "one from the project gallery: the button that does it is "
+                "enabled even when labelled `Upload …`, because it calls "
+                "`Flow.media.select`, not a file picker.\n"
             )
         if controls:
             notes.append("| Control | Values |")
