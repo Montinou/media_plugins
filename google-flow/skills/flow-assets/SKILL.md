@@ -132,7 +132,7 @@ resumes by calling it again.
 | 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | route with cost from an automated browser | Use `cdp_url` with a real Chrome |
 | The applet didn't mount | compiles with esbuild.wasm in the browser | Raise `loadTimeoutMs`; usually takes ~30s |
 | `don't know which project to work with` | no pack and no `FLOW_PROJECT_ID` | `flow_scaffold_pack`, or set the variable |
-| The generate button is disabled | the applet wants a source image | Pick one from the gallery: the `Upload …` button calls `Flow.media.select`, not a file picker, and is always enabled |
+| The generate button is disabled | the applet wants a source image | Add a `gallery` control to the recipe. The `Upload …` button calls `Flow.media.select`, not a file picker, and is always enabled |
 
 ## References
 

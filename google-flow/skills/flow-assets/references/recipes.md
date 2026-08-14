@@ -45,6 +45,21 @@ enough to identify it.
 
 ### matrix
 
+**`gallery`** — for applets that want a source image before enabling their
+generate button. `button` is the control that asks for one; despite usually
+reading `Upload …`, it calls `Flow.media.select` and opens the project gallery.
+
+```json
+{ "type": "gallery", "button": "Upload Source Map", "pick": "turnaround" }
+```
+
+`pick` is a substring of the item's title; omit it to take the preselected one,
+which is the most recent. `search` narrows the list first, for galleries with
+many items.
+
+The picker renders in the **parent frame**, not the applet's iframe, because
+`Flow.media.select` belongs to the host. The driver handles that.
+
 Maps dropdown labels to lists of values. `flow_batch_generate` generates the
 cartesian product: 7 factions × 4 actions = 28 images. Matrix values
 **override** any fixed control with the same label, so a fixed control and a
