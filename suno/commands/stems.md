@@ -62,7 +62,7 @@ available and ask.
 
 ## Reminders
 
-- **Never play** to verify. Measure.
+- **Measure to verify**, don't go by impression. The numbers go in the report.
 - If you created a copy of the project in step 3, **tell the user** at
   the end so they can decide whether to keep it.
 - Don't delete the zip or the user's prior files on your own.

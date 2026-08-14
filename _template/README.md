@@ -66,7 +66,8 @@ account and a banned one:
 - **No evading bot detection**, no CAPTCHAs, no 403. If a door is closed on
   purpose, it stays closed.
 - **Confirm before spending credits** or any irreversible action.
-- **Never play audio** to "verify": measure with `ffprobe`/`ffmpeg`.
+- **Verify by measuring**, not by impression: `ffprobe`/`ffmpeg` for audio,
+  dimensions for images. A measurement is reproducible and goes in the report.
 
 ## Deciding MCP or browser
 

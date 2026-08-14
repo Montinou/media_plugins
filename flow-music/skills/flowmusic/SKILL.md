@@ -47,9 +47,10 @@ These aren't decoration: they're the rules that keep the plugin safe to use.
 1. **Slow, paced requests, always.** The client enforces 2.5 s between
    requests (`FLOWMUSIC_MIN_INTERVAL`). Don't lower it. No bursts, no fast
    retries, no parallelizing downloads.
-2. **Never play audio.** Not in the browser, not locally. If you need to
-   know what's in a file, measure it (`ffprobe`, band-split `astats`), don't
-   listen to it. The user might be on a call or recording.
+2. **Verify by measuring.** To know what's in a file, measure it (`ffprobe`,
+   band-split `astats`) and report the numbers. Playing it back tells you
+   nothing you can put in a report — and check first if the user is in a
+   position to have sound come out.
 3. **Don't evade a 403.** `/__api/download/audio/{bassClipId}` returns 403 on
    purpose. The public `audio_url` **is not an evasion** — it's the URL that
    the app itself opens with "Open Stem". If that also starts returning 403

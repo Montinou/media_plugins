@@ -35,8 +35,8 @@ is what gets an account flagged.
 Adapt this list, but don't delete it — it's the reason the plugin is safe:
 
 1. **Slow, paced requests.** No bursts, no fast retries, no parallelism.
-2. **Never play audio.** Verify by measuring (`ffprobe`, `astats`), not by
-   listening.
+2. **Verify by measuring** (`ffprobe`, `astats`), not by impression. The
+   numbers go in the report.
 3. **Don't evade a block.** A 403 or a CAPTCHA is the provider's decision.
 4. **Confirm before spending** credits or any irreversible action.
 5. **Verify what you deliver** instead of trusting the file name.

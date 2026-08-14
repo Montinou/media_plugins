@@ -53,7 +53,7 @@ optionally the destination folder. If empty, list and ask.
 
 ## Reminders
 
-- **Don't play** any of the files to "check" them.
+- **Measure to check**, don't go by impression — step 5 is the check.
 - If the bass fails with 403 through the bucket route, **stop**: don't look
   for another route.
 - ffmpeg is required for step 5; if it isn't available, say so and deliver
