@@ -10,11 +10,11 @@ bearer is re-derived from the cookie on every run and cached to disk until
 it expires.
 
 Usage:
-    python3 tools/flow/flow_client.py whoami
-    python3 tools/flow/flow_client.py list
-    python3 tools/flow/flow_client.py get <appletId>
-    python3 tools/flow/flow_client.py code <appletId> [-o dest.jsx]
-    python3 tools/flow/flow_client.py sessions
+    python3 google-flow/lib/flow_client.py whoami
+    python3 google-flow/lib/flow_client.py list
+    python3 google-flow/lib/flow_client.py get <appletId>
+    python3 google-flow/lib/flow_client.py code <appletId> [-o dest.jsx]
+    python3 google-flow/lib/flow_client.py sessions
 """
 from __future__ import annotations
 
@@ -287,7 +287,9 @@ def main() -> None:
 
     elif args.cmd == "pull":
         data = get_applet(args.applet_id)
-        dest = Path(args.dir or REPO / "tools/flow/applets" / args.applet_id)
+        # Defaults to the current directory: this is a CLI and the plugin must
+        # not assume it lives inside any particular repo.
+        dest = Path(args.dir or Path.cwd() / "applets" / args.applet_id)
         dest.mkdir(parents=True, exist_ok=True)
         files = data.get("codeFiles") or []
         for f in files:

@@ -13,9 +13,9 @@ but uses the tool as published. That makes it immune to internal payload
 changes and respects the prompt logic that lives inside each applet.
 
 Usage:
-    python3 tools/flow/flow_driver.py inspect <appletId>
-    python3 tools/flow/flow_driver.py run <recipe.json> [-o dir]
-    python3 tools/flow/flow_driver.py batch <recipe.json> [--limit N] [-o dir]
+    python3 google-flow/lib/flow_driver.py inspect <appletId>
+    python3 google-flow/lib/flow_driver.py run <recipe.json> [-o dir]
+    python3 google-flow/lib/flow_driver.py batch <recipe.json> [--limit N] [-o dir]
 """
 from __future__ import annotations
 

@@ -33,7 +33,7 @@ def _resolve_lib() -> Path:
     The plugin is self-contained: `lib/` lives next to `mcp/`. The other two
     options exist for development — pointing to a different checkout without
     reinstalling, or running the server from a repo that has the libs under
-    `tools/flow`.
+    `lib/`.
     """
     candidates = []
     if os.environ.get("FLOW_LIB"):

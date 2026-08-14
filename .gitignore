@@ -7,6 +7,14 @@
 .env
 .env.*
 
+# Custom packs — account-specific ids (appletId, projectId), never in the
+# public repo. Keep yours in ~/.config/<plugin>/packs/ and point FLOW_PACK at
+# it, or version it in a private fork. Only the template ships here.
+*/packs/*
+!*/packs/README.md
+!*/packs/_template/
+!*/packs/_template/**
+
 # Generation outputs
 flow-out/
 flow-applets/

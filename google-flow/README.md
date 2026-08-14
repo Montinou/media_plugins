@@ -72,10 +72,14 @@ The `lib/` libraries also work as a CLI:
 
 ```bash
 python3 lib/flow_client.py list
-python3 lib/flow_driver.py dryrun recipes/sprite-forge-smoke.json
-python3 lib/flow_driver.py batch recipes/sprite-forge-facciones.json --limit 2
+python3 lib/flow_driver.py dryrun "$FLOW_PACK/recipes/my-recipe.json"
+python3 lib/flow_driver.py batch "$FLOW_PACK/recipes/my-recipe.json" --limit 2
 python3 lib/flow_upscale.py flow-out/ -f 2
 ```
+
+Run them from this directory. The recipes live in your pack, not here — see
+[`packs/`](./packs) — so `dryrun` first: it resolves the applet and prints what
+it would do without generating or spending anything.
 
 Outputs go to cwd (`flow-out/`, `flow-applets/`) unless `FLOW_OUT`, `FLOW_OUT`
 or `FLOW_APPLETS` are set.

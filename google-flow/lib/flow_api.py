@@ -30,8 +30,8 @@ The alternative is to avoid this route entirely: for pixel art
 interpolation) and costs nothing.
 
 Usage:
-    python3 tools/flow/flow_api.py token
-    python3 tools/flow/flow_api.py upsample <mediaId> [--resolution 2K] [--cdp URL]
+    python3 google-flow/lib/flow_api.py token
+    python3 google-flow/lib/flow_api.py upsample <mediaId> [--resolution 2K] [--cdp URL]
 """
 from __future__ import annotations
 

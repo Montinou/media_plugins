@@ -13,9 +13,9 @@ Why local instead of Flow's native 2K:
 For non-pixel art (painted backgrounds, illustration) use --filter lanczos.
 
 Usage:
-    python3 tools/flow/flow_upscale.py input.png -f 2
-    python3 tools/flow/flow_upscale.py input.png --target-width 2560
-    python3 tools/flow/flow_upscale.py folder/ -f 2 --suffix @2x
+    python3 google-flow/lib/flow_upscale.py input.png -f 2
+    python3 google-flow/lib/flow_upscale.py input.png --target-width 2560
+    python3 google-flow/lib/flow_upscale.py folder/ -f 2 --suffix @2x
 """
 from __future__ import annotations
 
