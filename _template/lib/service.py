@@ -162,3 +162,46 @@ class Service:
         with urllib.request.urlopen(req, timeout=300) as r:
             p.write_bytes(r.read())
         return {"path": str(p), "bytes": p.stat().st_size}
+
+
+# --------------------------------------------------------------------------- CLI
+
+
+def main() -> int:
+    """Expose the same capabilities as the MCP tools, from a terminal.
+
+    Worth keeping: an agent is not the only caller. Scripts, cron jobs and a
+    quick manual check all want the same operations, and writing them twice is
+    how the two copies drift apart.
+
+    Mirror your MCP tools here one to one, print JSON, and use the exit code to
+    distinguish "renew the session" (2) from any other failure (1).
+    """
+    import argparse
+    import sys
+
+    p = argparse.ArgumentParser(prog=SERVICE, description=f"{SERVICE} client")
+    p.add_argument("-c", "--cookies", help="path to the cookies JSON")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("status", help="session state — local, no network")
+    # Add one subparser per operation, matching your tools.
+
+    a = p.parse_args()
+
+    try:
+        svc = Service(a.cookies)
+        if a.cmd == "status":
+            out = svc.auth_status()
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return 0
+    except ServiceAuthError as e:
+        print(f"authentication: {e}", file=sys.stderr)
+        return 2
+    except ServiceError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
