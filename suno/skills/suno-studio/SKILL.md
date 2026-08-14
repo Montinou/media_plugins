@@ -5,41 +5,41 @@ description: Use when working in Suno Studio (suno.com/studio) — the multitrac
 
 # Suno Studio
 
-`suno.com/studio` es un **DAW multipista**, no un generador. Es la mejor vía que
-hay para obtener stems: 7 pistas en WAV sin pérdida, alineadas, en un click.
+`suno.com/studio` is a **multitrack DAW**, not a generator. It's the best
+route there is to get stems: 7 lossless WAV tracks, aligned, in one click.
 
-## Antes de entrar
+## Before going in
 
-1. `suno_auth_status` — local, sin red. Si el token venció, pedile al usuario
-   que abra `https://suno.com/` en Chrome con la sesión iniciada (al navegar se
-   renueva sola).
-2. Pestaña propia. Nunca pises otra en la que el usuario esté trabajando.
-3. **Regla dura: no toques ningún control de reproducción.** El Studio arranca
-   con audio cargado y un play involuntario suena fuerte del otro lado.
+1. `suno_auth_status` — local, no network. If the token expired, ask the
+   user to open `https://suno.com/` in Chrome with the session logged in
+   (it renews itself on navigation).
+2. Its own tab. Never step on another one the user is working in.
+3. **Hard rule: don't touch any playback control.** The Studio starts
+   with audio loaded, and an involuntary play blares loudly on the other end.
 
-## Entrar a un proyecto
+## Entering a project
 
-Dos caminos:
+Two paths:
 
-- **Proyecto guardado** — "Pick up where you left off", o `New empty project`.
-- **Cualquier canción** — botón `Edit in Studio` en la lista de la derecha.
+- **Saved project** — "Pick up where you left off", or `New empty project`.
+- **Any song** — `Edit in Studio` button in the list on the right.
 
-Los proyectos viejos traen badge **Legacy**. Al abrirlos aparece un diálogo:
+Old projects carry a **Legacy** badge. Opening them brings up a dialog:
 
-| Opción | Efecto |
+| Option | Effect |
 |---|---|
-| `Open in Studio 1.2 (Legacy)` | abre tal cual, **no crea nada** |
-| `Open in Studio 2.0` | **crea una copia** actualizada; no sobreescribe el original |
+| `Open in Studio 1.2 (Legacy)` | opens as-is, **creates nothing** |
+| `Open in Studio 2.0` | **creates a copy**, updated; doesn't overwrite the original |
 
-**Preguntale al usuario cuál quiere.** Studio 2.0 es la versión útil, pero deja
-un proyecto nuevo en su cuenta: eso es una modificación de su biblioteca y no es
-tuya para decidir.
+**Ask the user which one they want.** Studio 2.0 is the useful version,
+but it leaves a new project in their account: that's a modification of
+their library and isn't yours to decide.
 
-## La interfaz (2.0)
+## The interface (2.0)
 
 ```
-┌ SUNO  [proyecto]  undo/redo   ▸ transporte   87 BPM  4/4   Export  Library
-├ 1  <canción original>   S  A   ▓▓▓ waveform ▓▓▓
+┌ SUNO  [project]  undo/redo   ▸ transport   87 BPM  4/4   Export  Library
+├ 1  <original song>     S  A   ▓▓▓ waveform ▓▓▓
 ├ 2  Vocals              S  A   ▓▓▓
 ├ 3  Backing Vocals      S  A   ▓▓▓
 ├ 4  Drums               S  A   ▓▓▓
@@ -51,60 +51,61 @@ tuya para decidir.
 └ Mstr (master)                  [prompt v5.5]   + Add Track Effects
 ```
 
-- **Suno separa solo** al cargar la canción. No hay que pedir un "split stems"
-  aparte como en Flow Music.
-- Cada track: **S** (solo), **A**, fader y waveform sobre la timeline.
-- Abajo, un prompt en **BETA** que actúa sobre el track seleccionado y genera
-  efectos o material en lenguaje natural — *"build a gritty delay and put it on
-  this track"*, *"generate an 8-bar drum loop and drop it here"* — con selector
-  de modelo (**v5.5**). Consume créditos: confirmá antes.
-- `Add Track Effects` para la cadena del track.
+- **Suno separates on its own** when the song loads. There's no separate
+  "split stems" request needed like in Flow Music.
+- Each track: **S** (solo), **A**, fader, and waveform over the timeline.
+- Below, a prompt in **BETA** acts on the selected track and generates
+  effects or material in natural language — *"build a gritty delay and
+  put it on this track"*, *"generate an 8-bar drum loop and drop it
+  here"* — with a model selector (**v5.5**). Consumes credits: confirm
+  before using.
+- `Add Track Effects` for the track's effect chain.
 
-## Export → Multitrack (los stems)
+## Export → Multitrack (the stems)
 
-`Export` arriba a la derecha, tres opciones:
+`Export` at the top right, three options:
 
-| Opción | Qué hace |
+| Option | What it does |
 |---|---|
-| `Full Song` | mezcla completa |
-| `Selected Time Range` | solo el rango marcado |
-| **`Multitrack`** | **zip con un WAV por track** |
+| `Full Song` | full mix |
+| `Selected Time Range` | only the marked range |
+| **`Multitrack`** | **zip with one WAV per track** |
 
-`Multitrack` es la vía oficial. No hay nada que rodear.
+`Multitrack` is the official route. There's nothing to work around.
 
-### Qué esperar
+### What to expect
 
-- **Tarda y pesa.** Un proyecto de ~3 min dio **421 MB**. La descarga aparece
-  como `.crdownload` y crece por un par de minutos: **esperá con paciencia**, no
-  vuelvas a apretar Export ni recargues.
-- **PCM float32, 48 kHz, estéreo.** Sin pérdida.
-- Todos los archivos pesan **exactamente lo mismo**: están alineados desde 0.
-- Nombres con prefijo de pista: `0 <canción>.wav`, `1 Vocals.wav`,
+- **Takes time and weighs a lot.** A ~3 min project came out to **421 MB**.
+  The download shows up as `.crdownload` and grows for a couple of
+  minutes: **wait patiently**, don't press Export again or reload.
+- **32-bit float PCM, 48 kHz, stereo.** Lossless.
+- All files are **exactly the same size**: they're aligned from 0.
+- Names with a track-order prefix: `0 <song>.wav`, `1 Vocals.wav`,
   `2 Backing Vocals.wav`, `3 Drums.wav`, `4 Bass.wav`, `6 Guitar.wav`,
   `7 Synth.wav`.
 
-Hay además un **"Bulk-export presets"** para dejar presets configurados.
+There's also a **"Bulk-export presets"** option to leave presets configured.
 
-### Después de bajar
+### After downloading
 
-Verificá antes de cantar victoria:
+Verify before declaring victory:
 
-1. `suno_inspect_multitrack` con la ruta del zip — tracks, tamaños, alineación
-   y stems faltantes, sin extraer nada.
-2. `suno_verify_stem` sobre el bass extraído: debe dar **dominancia grave**
-   (en una medición real: 17,3 dB). Las voces, dominancia aguda.
+1. `suno_inspect_multitrack` with the zip path — tracks, sizes,
+   alignment, and missing stems, without extracting anything.
+2. `suno_verify_stem` on the extracted bass: it should show **low-end
+   dominance** (in a real measurement: 17.3 dB). Vocals, high-end dominance.
 
-Nunca "verifiques" reproduciendo.
+Never "verify" by playing it back.
 
-## Comparación con Flow Music
+## Comparison with Flow Music
 
 | | Flow Music | Suno Studio |
 |---|---|---|
 | Stems | 4 | 7 |
-| Formato | m4a AAC | WAV float32 48 kHz |
-| Bass | bloqueado por la vía oficial | incluido |
-| Separación | hay que pedirla | automática al cargar |
-| Edición | no hay | DAW con efectos y generación por track |
+| Format | m4a AAC | WAV float32 48 kHz |
+| Bass | blocked via the official route | included |
+| Separation | must be requested | automatic on load |
+| Editing | none | DAW with effects and per-track generation |
 
-Para trabajar con stems, Suno es netamente superior. Si el usuario tiene ambas,
-recomendá Suno salvo que ya tenga el material en Flow Music.
+For working with stems, Suno is clearly superior. If the user has both,
+recommend Suno unless they already have the material in Flow Music.

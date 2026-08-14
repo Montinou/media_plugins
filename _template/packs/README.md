@@ -1,35 +1,36 @@
-# packs/ — lo que es tuyo, no del plugin
+# packs/ — what's yours, not the plugin's
 
-Un plugin de este marketplace tiene dos capas, y la distinción no es cosmética:
+A plugin in this marketplace has two layers, and the distinction isn't
+cosmetic:
 
-| Capa | Qué vive ahí | ¿Sirve para cualquiera? |
+| Layer | What lives there | Works for anyone? |
 |---|---|---|
-| **core** (`lib/`, `mcp/`, `skills/`, `commands/`) | cómo hablarle al servicio: auth, ritmo, endpoints, tools | **sí** |
-| **pack** (`packs/<proyecto>/`) | ids de tus herramientas, presets, prompts, nombres de tu proyecto | **no**, es tuyo |
+| **core** (`lib/`, `mcp/`, `skills/`, `commands/`) | how to talk to the service: auth, pacing, endpoints, tools | **yes** |
+| **pack** (`packs/<project>/`) | your tool ids, presets, prompts, your project's names | **no**, it's yours |
 
-La regla: **si otra persona no puede usarlo tal cual, es un pack.**
+The rule: **if someone else can't use it as-is, it's a pack.**
 
-Un `appletId`, un `space_version_id`, un `project_id`, la lista de facciones de
-tu juego, tus presets de estilo — nada de eso va en el core. Si se cuela, el
-plugin deja de ser instalable por otro y encima queda con identificadores tuyos
-en un repo público.
+An `appletId`, a `space_version_id`, a `project_id`, your game's faction
+list, your style presets — none of that goes in the core. If it leaks in,
+the plugin stops being installable by anyone else, and on top of that your
+identifiers end up in a public repo.
 
-## Estructura de un pack
+## Structure of a pack
 
 ```
 packs/
-└── mi-proyecto/
-    ├── pack.json          ids y config del proyecto
-    ├── recipes/           presets ejecutables
-    └── notas.md           catálogo de tus herramientas, decisiones, lo que sea
+└── my-project/
+    ├── pack.json          project ids and config
+    ├── recipes/           executable presets
+    └── notes.md           catalog of your tools, decisions, whatever
 ```
 
-`pack.json` mínimo:
+Minimal `pack.json`:
 
 ```json
 {
-  "name": "mi-proyecto",
-  "description": "Para qué es este pack",
+  "name": "my-project",
+  "description": "What this pack is for",
   "ids": {
     "appletId": "…",
     "projectId": "…"
@@ -40,35 +41,36 @@ packs/
 }
 ```
 
-## Cómo se elige un pack
+## How a pack gets chosen
 
-Por variable de entorno o por argumento de la tool — nunca hardcodeado:
+By environment variable or tool argument — never hardcoded:
 
 ```bash
-export EXAMPLE_PACK=mi-proyecto
+export EXAMPLE_PACK=my-project
 ```
 
-En el código, resolvelo así (y que falle con un mensaje claro si no existe):
+In code, resolve it like this (and fail with a clear message if it doesn't
+exist):
 
 ```python
 def load_pack(name: str | None = None) -> dict:
     name = name or os.environ.get(f"{SERVICE.upper()}_PACK")
     if not name:
-        return {}                      # sin pack: el core funciona igual
+        return {}                      # no pack: the core works the same
     p = Path(__file__).resolve().parents[1] / "packs" / name / "pack.json"
     if not p.is_file():
         avail = [d.name for d in p.parents[0].parent.iterdir() if d.is_dir()]
-        raise ServiceError(f"No existe el pack {name!r}. Disponibles: {avail}")
+        raise ServiceError(f"Pack {name!r} doesn't exist. Available: {avail}")
     return json.loads(p.read_text())
 ```
 
-**El core tiene que funcionar sin ningún pack.** Un pack agrega atajos, no
-capacidades: si una tool sólo anda con pack, esa tool está mal diseñada.
+**The core has to work without any pack.** A pack adds shortcuts, not
+capabilities: if a tool only works with a pack, that tool is badly designed.
 
-## Publicar packs, o no
+## Publishing packs, or not
 
-Un pack en el repo público es legible por cualquiera. Si tiene ids de proyectos
-privados o prompts que no querés compartir, dejalo fuera: los packs también se
-leen desde `~/.config/<plugin>/packs/`, que nunca entra al repo.
+A pack in the public repo is readable by anyone. If it has ids for private
+projects or prompts you don't want to share, leave it out: packs are also
+read from `~/.config/<plugin>/packs/`, which never enters the repo.
 
-Ningún pack lleva credenciales. Nunca. Eso va en `~/.config/<plugin>/`.
+No pack ever carries credentials. Ever. That goes in `~/.config/<plugin>/`.

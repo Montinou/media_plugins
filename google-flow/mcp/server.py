@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Servidor MCP para Google Labs Flow.
+"""MCP server for Google Labs Flow.
 
-Habla JSON-RPC 2.0 sobre stdio sin dependencias externas: el Python de Homebrew
-está bajo PEP 668, así que instalar el SDK oficial obligaría a
-`--break-system-packages` sobre el intérprete del sistema. El transporte stdio
-de MCP es JSON delimitado por saltos de línea, y eso se implementa acá directo.
+Speaks JSON-RPC 2.0 over stdio with no external dependencies: Homebrew's
+Python is under PEP 668, so installing the official SDK would force
+`--break-system-packages` on the system interpreter. MCP's stdio transport is
+newline-delimited JSON, and that's implemented directly here.
 
-Las bibliotecas de Flow (flow_client, flow_driver, flow_upscale, flow_api) se
-resuelven desde el repo; ver `_resolve_lib`.
+The Flow libraries (flow_client, flow_driver, flow_upscale, flow_api) are
+resolved from the repo; see `_resolve_lib`.
 """
 from __future__ import annotations
 
@@ -24,15 +24,15 @@ SERVER_NAME = "google-flow"
 SERVER_VERSION = "0.1.0"
 
 
-# --------------------------------------------------------------- resolución lib
+# --------------------------------------------------------------- lib resolution
 
 
 def _resolve_lib() -> Path:
-    """Ubica las bibliotecas de Flow.
+    """Locates the Flow libraries.
 
-    El plugin es autocontenido: `lib/` vive al lado de `mcp/`. Las otras dos
-    opciones existen para desarrollo — apuntar a un checkout distinto sin
-    reinstalar, o correr el server desde un repo que tenga las libs en
+    The plugin is self-contained: `lib/` lives next to `mcp/`. The other two
+    options exist for development — pointing to a different checkout without
+    reinstalling, or running the server from a repo that has the libs under
     `tools/flow`.
     """
     candidates = []
@@ -49,9 +49,9 @@ def _resolve_lib() -> Path:
         if (c / "flow_client.py").exists():
             return c
     raise RuntimeError(
-        "No encuentro las bibliotecas de Flow (flow_client.py). Probé: "
+        "Can't find the Flow libraries (flow_client.py). Tried: "
         + ", ".join(str(c) for c in candidates)
-        + ". Definí FLOW_LIB con la ruta correcta."
+        + ". Set FLOW_LIB to the right path."
     )
 
 
@@ -64,7 +64,7 @@ import flow_packs  # noqa: E402
 import flow_upscale  # noqa: E402
 
 
-# ------------------------------------------------------------------- registro
+# ------------------------------------------------------------------- registry
 
 TOOLS: list[dict] = []
 HANDLERS: dict[str, Callable[[dict], Any]] = {}
@@ -99,14 +99,14 @@ def _out_dir(sub: str) -> Path:
 
 
 def _resolve_recipe(args: dict) -> dict:
-    """Acepta la receta inline o el nombre de una del pack activo."""
+    """Accepts the recipe inline or the name of one from the active pack."""
     if args.get("recipe"):
         return args["recipe"]
     if args.get("recipe_name"):
         return flow_packs.load_recipe(args["recipe_name"])
     raise ValueError(
-        "hace falta 'recipe' (objeto) o 'recipe_name' (del pack). "
-        "Las recetas del pack se listan con flow_pack_info."
+        "need either 'recipe' (object) or 'recipe_name' (from the pack). "
+        "Pack recipes are listed by flow_pack_info."
     )
 
 
@@ -115,12 +115,12 @@ def _resolve_recipe(args: dict) -> dict:
 
 @tool(
     "flow_session_status",
-    "Estado de la sesión de Google Labs Flow: usuario, vencimiento y créditos "
-    "disponibles. Úsese primero cuando cualquier otra tool falle con error de "
-    "autenticación, para distinguir una cookie vencida de otro problema. No "
-    "genera nada ni gasta créditos.",
+    "Google Labs Flow session status: user, expiration, and available credits. "
+    "Use this first when any other tool fails with an auth error, to tell an "
+    "expired cookie apart from another problem. Generates nothing and spends "
+    "no credits.",
     {"properties": {}},
-    title="Estado de sesión Flow",
+    title="Flow session status",
     readOnlyHint=True,
     openWorldHint=True,
 )
@@ -143,25 +143,25 @@ def _session_status(args: dict) -> dict:
 
 @tool(
     "flow_list_applets",
-    "Lista las herramientas ('applets') disponibles en Google Labs Flow, con su "
-    "appletId, versión y descripción. Incluye las propias, las de la comunidad y "
-    "las oficiales. Devuelve el appletId que necesitan las demás tools. Para ver "
-    "el código de una en particular, usar flow_get_applet_code.",
+    "Lists the tools ('applets') available in Google Labs Flow, with their "
+    "appletId, version, and description. Includes your own, community ones, "
+    "and official ones. Returns the appletId the other tools need. To see a "
+    "specific one's code, use flow_get_applet_code.",
     {
         "properties": {
             "filter": {
                 "type": "string",
-                "description": "Subcadena para filtrar por nombre o descripción, "
-                "sin distinguir mayúsculas. Ej: 'sprite'.",
+                "description": "Substring to filter by name or description, "
+                "case-insensitive. E.g.: 'sprite'.",
             },
             "mine_only": {
                 "type": "boolean",
-                "description": "Sólo applets propios, excluyendo los de la "
-                "comunidad (cuyo id empieza con 'community-'). Default false.",
+                "description": "Only your own applets, excluding community "
+                "ones (whose id starts with 'community-'). Default false.",
             },
         }
     },
-    title="Listar applets de Flow",
+    title="List Flow applets",
     readOnlyHint=True,
     openWorldHint=True,
 )
@@ -195,27 +195,27 @@ def _list_applets(args: dict) -> dict:
 
 @tool(
     "flow_get_applet_code",
-    "Descarga el código fuente de un applet de Flow y lo guarda en "
-    "flow-applets/<appletId>/ (o FLOW_APPLETS). Devuelve los archivos y, si existe, el "
-    "contenido de constants.ts, que es donde viven los valores válidos de los "
-    "dropdowns necesarios para escribir recetas. Para saber qué controles expone "
-    "la UI, usar flow_inspect_controls.",
+    "Downloads a Flow applet's source code and saves it to "
+    "flow-applets/<appletId>/ (or FLOW_APPLETS). Returns the files and, if it "
+    "exists, the content of constants.ts, which is where the valid dropdown "
+    "values needed for writing recipes live. To find out what controls the UI "
+    "exposes, use flow_inspect_controls.",
     {
         "properties": {
             "applet_id": {
                 "type": "string",
-                "description": "appletId (UUID) obtenido de flow_list_applets.",
+                "description": "appletId (UUID) obtained from flow_list_applets.",
             },
             "include_source": {
                 "type": "boolean",
-                "description": "Incluir el contenido completo de cada archivo en "
-                "la respuesta además de escribirlos a disco. Default false, "
-                "porque el código suele superar los 20k caracteres.",
+                "description": "Include each file's full content in the "
+                "response in addition to writing them to disk. Default "
+                "false, because the code often exceeds 20k characters.",
             },
         },
         "required": ["applet_id"],
     },
-    title="Código fuente de un applet",
+    title="Applet source code",
     readOnlyHint=False,
     openWorldHint=True,
 )
@@ -253,21 +253,21 @@ def _get_applet_code(args: dict) -> dict:
 
 @tool(
     "flow_inspect_controls",
-    "Abre un applet en un browser y devuelve el inventario real de sus controles: "
-    "texto de cada botón y placeholder de cada campo. Es la fuente de verdad para "
-    "los campos 'label', 'placeholder' y 'generateButton' de una receta. Tarda "
-    "cerca de un minuto porque el applet se compila en el browser. No genera nada "
-    "ni gasta créditos.",
+    "Opens an applet in a browser and returns the real inventory of its "
+    "controls: each button's text and each field's placeholder. It's the "
+    "source of truth for a recipe's 'label', 'placeholder', and "
+    "'generateButton' fields. Takes about a minute because the applet "
+    "compiles in the browser. Generates nothing and spends no credits.",
     {
         "properties": {
             "applet_id": {
                 "type": "string",
-                "description": "appletId (UUID) obtenido de flow_list_applets.",
+                "description": "appletId (UUID) obtained from flow_list_applets.",
             }
         },
         "required": ["applet_id"],
     },
-    title="Inspeccionar controles",
+    title="Inspect controls",
     readOnlyHint=True,
     openWorldHint=True,
 )
@@ -279,25 +279,25 @@ def _inspect_controls(args: dict) -> dict:
 
 @tool(
     "flow_dryrun_recipe",
-    "Aplica todos los controles de una receta en el applet SIN disparar la "
-    "generación, y devuelve el estado final de cada control. Verifica que labels "
-    "y valores existan y sean seleccionables, con costo cero. Correr esto antes "
-    "de flow_batch_generate sobre cualquier receta nueva.",
+    "Applies all of a recipe's controls on the applet WITHOUT firing the "
+    "generation, and returns each control's final state. Verifies that "
+    "labels and values exist and are selectable, at zero cost. Run this "
+    "before flow_batch_generate on any new recipe.",
     {
         "properties": {
             "recipe": {
                 "type": "object",
-                "description": "Receta completa. Ver la referencia de recetas del "
-                "skill flow-assets para el esquema.",
+                "description": "Full recipe. See the flow-assets skill's "
+                "recipe reference for the schema.",
             },
             "recipe_name": {
                 "type": "string",
-                "description": "Alternativa a 'recipe': nombre de una receta del "
-                "pack activo, listadas por flow_pack_info.",
+                "description": "Alternative to 'recipe': name of a recipe "
+                "from the active pack, listed by flow_pack_info.",
             },
         },
     },
-    title="Dryrun de receta (sin costo)",
+    title="Dry-run a recipe (no cost)",
     readOnlyHint=True,
     openWorldHint=True,
 )
@@ -313,34 +313,34 @@ def _dryrun(args: dict) -> dict:
         return {
             "ok": True,
             "controls": [t for t in drv._button_texts() if t],
-            "note": "No se disparó ninguna generación.",
+            "note": "No generation was fired.",
         }
 
 
 @tool(
     "flow_generate",
-    "Genera UNA imagen ejecutando un applet con los controles de la receta, y la "
-    "guarda como PNG. Devuelve la ruta, las dimensiones, el mediaId y el costo en "
-    "créditos medido antes/después. Para varias variantes usar "
-    "flow_batch_generate, que reutiliza una sola sesión de browser.",
+    "Generates ONE image by running an applet with the recipe's controls, "
+    "and saves it as a PNG. Returns the path, the dimensions, the mediaId, "
+    "and the credit cost measured before/after. For several variants use "
+    "flow_batch_generate, which reuses a single browser session.",
     {
         "properties": {
             "recipe": {
                 "type": "object",
-                "description": "Receta con appletId, generateButton y controls.",
+                "description": "Recipe with appletId, generateButton, and controls.",
             },
             "recipe_name": {
                 "type": "string",
-                "description": "Alternativa a 'recipe': nombre de una receta del "
-                "pack activo.",
+                "description": "Alternative to 'recipe': name of a recipe "
+                "from the active pack.",
             },
             "out_dir": {
                 "type": "string",
-                "description": "Carpeta destino. Default work/flow-mcp/single.",
+                "description": "Destination folder. Default work/flow-mcp/single.",
             },
         },
     },
-    title="Generar una imagen",
+    title="Generate one image",
     readOnlyHint=False,
     openWorldHint=True,
 )
@@ -359,35 +359,35 @@ def _generate(args: dict) -> dict:
 
 @tool(
     "flow_batch_generate",
-    "Genera todas las combinaciones del producto cartesiano del campo 'matrix' de "
-    "una receta, reutilizando una sola sesión de browser y pausando entre ítems. "
-    "Saltea las variantes cuyo PNG ya existe, así que una corrida interrumpida se "
-    "retoma volviéndola a llamar. Usar 'limit' para tandas cortas.",
+    "Generates every combination of the cartesian product of a recipe's "
+    "'matrix' field, reusing a single browser session and pausing between "
+    "items. Skips variants whose PNG already exists, so an interrupted run "
+    "resumes by calling it again. Use 'limit' for short batches.",
     {
         "properties": {
             "recipe": {
                 "type": "object",
-                "description": "Receta con 'matrix': un objeto que mapea cada "
-                "label de dropdown a la lista de valores a recorrer.",
+                "description": "Recipe with 'matrix': an object mapping "
+                "each dropdown label to the list of values to sweep.",
             },
             "recipe_name": {
                 "type": "string",
-                "description": "Alternativa a 'recipe': nombre de una receta del "
-                "pack activo.",
+                "description": "Alternative to 'recipe': name of a recipe "
+                "from the active pack.",
             },
             "out_dir": {
                 "type": "string",
-                "description": "Carpeta destino. Default work/flow-mcp/batch.",
+                "description": "Destination folder. Default work/flow-mcp/batch.",
             },
             "limit": {
                 "type": "integer",
-                "description": "Cortar en las primeras N variantes. Conviene "
-                "empezar con 2 o 3 para validar antes de una tanda larga.",
+                "description": "Stop after the first N variants. Worth "
+                "starting with 2 or 3 to validate before a long batch.",
                 "minimum": 1,
             },
         },
     },
-    title="Generar en batch",
+    title="Generate in batch",
     readOnlyHint=False,
     openWorldHint=True,
 )
@@ -409,36 +409,36 @@ def _batch(args: dict) -> dict:
 
 @tool(
     "flow_upscale_local",
-    "Agranda PNGs localmente sin costo ni red. Con filter 'nearest' y factor "
-    "entero preserva los bordes duros del pixel art; 'lanczos' es para arte "
-    "pintado. Es la opción correcta para sprites: el upscaler generativo de Flow "
-    "los suavizaría. Acepta un archivo o una carpeta.",
+    "Enlarges PNGs locally with no cost and no network. With filter "
+    "'nearest' and an integer factor it preserves pixel art's sharp edges; "
+    "'lanczos' is for painted art. It's the right choice for sprites: "
+    "Flow's generative upscaler would soften them. Accepts a file or a folder.",
     {
         "properties": {
             "src": {
                 "type": "string",
-                "description": "Ruta a un PNG o a una carpeta con PNGs.",
+                "description": "Path to a PNG or to a folder with PNGs.",
             },
             "factor": {
                 "type": "integer",
-                "description": "Factor entero de escala. Default 2.",
+                "description": "Integer scale factor. Default 2.",
                 "minimum": 2,
                 "maximum": 8,
             },
             "filter": {
                 "type": "string",
                 "enum": ["nearest", "lanczos", "bicubic"],
-                "description": "nearest para pixel art (default), lanczos para "
-                "arte pintado o fotográfico.",
+                "description": "nearest for pixel art (default), lanczos "
+                "for painted or photographic art.",
             },
             "suffix": {
                 "type": "string",
-                "description": "Sufijo del archivo de salida. Default '@2x'.",
+                "description": "Output file suffix. Default '@2x'.",
             },
         },
         "required": ["src"],
     },
-    title="Upscale local (sin costo)",
+    title="Local upscale (no cost)",
     readOnlyHint=False,
     openWorldHint=False,
 )
@@ -449,11 +449,11 @@ def _upscale_local(args: dict) -> dict:
     suffix = args.get("suffix", f"@{factor}x")
     files = sorted(src.glob("*.png")) if src.is_dir() else [src]
     if not files:
-        raise ValueError(f"sin PNGs en {src}")
+        raise ValueError(f"no PNGs in {src}")
     done = []
     for f in files:
         if f.stem.endswith(suffix):
-            continue  # no re-escalar salidas previas
+            continue  # don't re-scale previous outputs
         dest = f.parent / f"{f.stem}{suffix}.png"
         w, h, nw, nh = flow_upscale.upscale(f, dest, factor=factor, filt=filt)
         done.append({"src": str(f), "out": str(dest), "from": f"{w}x{h}", "to": f"{nw}x{nh}"})
@@ -462,30 +462,31 @@ def _upscale_local(args: dict) -> dict:
 
 @tool(
     "flow_upscale_native",
-    "Manda una imagen ya generada al upscaler 2K/4K de Flow, identificada por su "
-    "mediaId. CONSUME CRÉDITOS y exige un Chrome real vía cdp_url: los tokens de "
-    "reCAPTCHA de un browser automatizado son rechazados con 403. Para pixel art "
-    "usar flow_upscale_local, que da mejor resultado y no cuesta.",
+    "Sends an already-generated image to Flow's 2K/4K upscaler, identified "
+    "by its mediaId. SPENDS CREDITS and requires a real Chrome via cdp_url: "
+    "reCAPTCHA tokens from an automated browser get rejected with 403. For "
+    "pixel art use flow_upscale_local, which gives a better result and "
+    "costs nothing.",
     {
         "properties": {
             "media_id": {
                 "type": "string",
-                "description": "UUID devuelto como mediaId por flow_generate.",
+                "description": "UUID returned as mediaId by flow_generate.",
             },
             "resolution": {
                 "type": "string",
                 "enum": ["2K", "4K"],
-                "description": "Resolución destino. Default 2K.",
+                "description": "Target resolution. Default 2K.",
             },
             "cdp_url": {
                 "type": "string",
-                "description": "Endpoint de un Chrome real, ej. "
-                "http://localhost:9222. Sin esto la llamada da 403.",
+                "description": "Endpoint of a real Chrome, e.g. "
+                "http://localhost:9222. Without this the call gets a 403.",
             },
         },
         "required": ["media_id", "cdp_url"],
     },
-    title="Upscale 2K/4K nativo (con costo)",
+    title="Native 2K/4K upscale (costs credits)",
     readOnlyHint=False,
     openWorldHint=True,
 )
@@ -509,12 +510,13 @@ def _upscale_native(args: dict) -> dict:
 
 @tool(
     "flow_pack_info",
-    "Describe el pack activo: proyecto de Flow, herramientas registradas con sus "
-    "controles y vocabularios, y recetas disponibles. Un pack es la parte propia "
-    "de cada cuenta (projectId, appletIds, valores de dropdown); el resto del "
-    "plugin es genérico. Si no hay pack, explica cómo generar uno.",
+    "Describes the active pack: Flow project, registered tools with their "
+    "controls and vocabularies, and available recipes. A pack is the part "
+    "specific to each account (projectId, appletIds, dropdown values); the "
+    "rest of the plugin is generic. If there's no pack, explains how to "
+    "generate one.",
     {"properties": {}},
-    title="Pack activo",
+    title="Active pack",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -523,9 +525,9 @@ def _pack_info(args: dict) -> dict:
     if pack is None:
         return {
             "pack": None,
-            "note": "No hay pack activo. Generá uno con flow_scaffold_pack, o "
-            "apuntá FLOW_PACK a un directorio que tenga pack.json. Sin pack, "
-            "las tools que abren un applet necesitan project_id explícito.",
+            "note": "No active pack. Generate one with flow_scaffold_pack, "
+            "or point FLOW_PACK at a directory that has pack.json. Without "
+            "a pack, tools that open an applet need an explicit project_id.",
         }
     applets = {
         slug: {
@@ -548,41 +550,43 @@ def _pack_info(args: dict) -> dict:
 
 @tool(
     "flow_scaffold_pack",
-    "Genera un pack para la cuenta actual: descubre el proyecto de Flow, lista "
-    "las herramientas propias, baja su código y extrae de constants.ts los "
-    "valores válidos de cada dropdown, dejando pack.json, applets.md y una "
-    "receta inicial por herramienta. Es el punto de partida para usar el plugin "
-    "con una cuenta nueva. No genera imágenes ni gasta créditos.",
+    "Generates a pack for the current account: discovers the Flow project, "
+    "lists your own tools, downloads their code, and extracts each "
+    "dropdown's valid values from constants.ts, leaving pack.json, "
+    "applets.md, and one starter recipe per tool. It's the starting point "
+    "for using the plugin with a new account. Generates no images and "
+    "spends no credits.",
     {
         "properties": {
             "dest": {
                 "type": "string",
-                "description": "Directorio donde escribir el pack. Se crea si no "
-                "existe. Ej: ./mi-pack o ~/.config/google-flow/packs/mio.",
+                "description": "Directory to write the pack to. Created if "
+                "it doesn't exist. E.g.: ./my-pack or "
+                "~/.config/google-flow/packs/mine.",
             },
             "name": {
                 "type": "string",
-                "description": "Nombre del pack, para identificarlo.",
+                "description": "Pack name, to identify it.",
             },
             "project_id": {
                 "type": "string",
-                "description": "projectId de Flow. Si se omite se descubre "
-                "abriendo la app en un browser.",
+                "description": "Flow projectId. If omitted it's discovered "
+                "by opening the app in a browser.",
             },
             "filter": {
                 "type": "string",
-                "description": "Incluir sólo las herramientas cuyo nombre o "
-                "descripción contenga esta subcadena.",
+                "description": "Include only tools whose name or "
+                "description contains this substring.",
             },
             "include_community": {
                 "type": "boolean",
-                "description": "Incluir también applets de la comunidad. Default "
-                "false: un pack describe las herramientas propias.",
+                "description": "Also include community applets. Default "
+                "false: a pack describes your own tools.",
             },
         },
         "required": ["dest", "name"],
     },
-    title="Generar un pack para esta cuenta",
+    title="Generate a pack for this account",
     readOnlyHint=False,
     openWorldHint=True,
 )
@@ -624,7 +628,7 @@ def handle(msg: dict) -> dict | None:
         )
 
     if method in ("notifications/initialized", "notifications/cancelled"):
-        return None  # las notificaciones no llevan respuesta
+        return None  # notifications carry no response
 
     if method == "ping":
         return _result(rid, {})
@@ -644,8 +648,8 @@ def handle(msg: dict) -> dict | None:
                     "content": [
                         {
                             "type": "text",
-                            "text": f"No existe la tool {name!r}. "
-                            f"Disponibles: {', '.join(sorted(HANDLERS))}",
+                            "text": f"No such tool {name!r}. "
+                            f"Available: {', '.join(sorted(HANDLERS))}",
                         }
                     ],
                 },
@@ -671,9 +675,9 @@ def handle(msg: dict) -> dict | None:
                     "content": [
                         {
                             "type": "text",
-                            "text": f"Sesión de Flow inválida: {e}\n"
-                            "Reexportá las cookies de labs.google a "
-                            "labs.google.cookies.json en la raíz del repo.",
+                            "text": f"Invalid Flow session: {e}\n"
+                            "Re-export the labs.google cookies to "
+                            "labs.google.cookies.json at the repo root.",
                         }
                     ],
                 },
@@ -695,25 +699,25 @@ def handle(msg: dict) -> dict | None:
 
     if rid is None:
         return None
-    return _error(rid, -32601, f"método no soportado: {method}")
+    return _error(rid, -32601, f"unsupported method: {method}")
 
 
 def main() -> None:
-    # Aislar los descriptores del protocolo antes de que exista un subproceso.
-    # Playwright lanza un proceso Node que hereda stdin y stdout: si los
-    # comparte, se come las líneas del protocolo (el server deja de responder
-    # después de la primera tool que abre browser) y ensucia stdout.
+    # Isolate the protocol descriptors before a subprocess exists. Playwright
+    # launches a Node process that inherits stdin and stdout: if it shares
+    # them, it eats the protocol's lines (the server stops responding after
+    # the first tool that opens a browser) and pollutes stdout.
     proto_in_fd = os.dup(0)
     proto_out_fd = os.dup(1)
 
     devnull = os.open(os.devnull, os.O_RDONLY)
-    os.dup2(devnull, 0)  # los hijos heredan /dev/null, no el canal del protocolo
+    os.dup2(devnull, 0)  # children inherit /dev/null, not the protocol channel
     os.close(devnull)
-    os.dup2(2, 1)  # lo que un hijo escriba a stdout va a stderr
+    os.dup2(2, 1)  # whatever a child writes to stdout goes to stderr
 
     stdin = os.fdopen(proto_in_fd, "r", encoding="utf-8")
     protocol_out = os.fdopen(proto_out_fd, "w", encoding="utf-8")
-    sys.stdout = sys.stderr  # y lo que imprima este proceso, también
+    sys.stdout = sys.stderr  # and whatever this process prints, too
 
     for line in iter(stdin.readline, ""):
         line = line.strip()
@@ -725,7 +729,7 @@ def main() -> None:
             continue
         try:
             response = handle(msg)
-        except Exception as e:  # nunca tirar el transporte
+        except Exception as e:  # never bring down the transport
             response = _error(msg.get("id"), -32603, f"{type(e).__name__}: {e}")
         if response is not None:
             protocol_out.write(json.dumps(response, ensure_ascii=False) + "\n")

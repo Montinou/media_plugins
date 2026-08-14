@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "python3",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"],
-      "note": "Servidor local sin dependencias de pip: JSON-RPC sobre stdio con la stdlib. Renombrá la clave y el SERVER_NAME al adaptarlo."
+      "note": "Local server with no pip dependencies: JSON-RPC over stdio using the stdlib only. Rename the key and SERVER_NAME when you adapt it."
     }
   }
 }

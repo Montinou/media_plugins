@@ -1,66 +1,67 @@
 # suno
 
-Operar **Suno** con criterio: el Studio 2.0 (DAW multipista, export de stems en
-WAV), la generación fuera del Studio, y verificación local de lo descargado.
+Operate **Suno** with judgment: Studio 2.0 (multitrack DAW, stem export in
+WAV), generation outside the Studio, and local verification of downloads.
 
-## Instalación
+## Install
 
 ```
 /plugin marketplace add Montinou/media_plugins
 /plugin install suno@media-plugins
 ```
 
-## El MCP no toca la red, a propósito
+## The MCP doesn't touch the network, on purpose
 
-A diferencia de `flowmusic`, acá **ninguna tool hace requests a Suno**. Tres
-razones verificadas:
+Unlike `flowmusic`, here **no tool makes requests to Suno**. Three verified
+reasons:
 
-1. **No se puede renovar la sesión.** Auth es Clerk, JWT de 1 hora. El export
-   de cookies trae `__client_uat` pero **no `__client`**, que es con lo que
-   Clerk emite tokens nuevos. Un script se muere a la hora, siempre.
-2. **Cloudflare.** Sin `cf_clearance`, las requests de script llegan con
-   fingerprint de bot — justo lo que dispara challenges.
-3. **Los ToS prohíben el acceso automatizado.** Está en juego la cuenta, la
-   suscripción y el catálogo del usuario.
+1. **The session can't be renewed.** Auth is Clerk, 1-hour JWT. The cookie
+   export includes `__client_uat` but **not `__client`**, which is what
+   Clerk uses to issue new tokens. A script dies after an hour, always.
+2. **Cloudflare.** Without `cf_clearance`, script requests arrive with a
+   bot fingerprint — exactly what triggers challenges.
+3. **The ToS forbid automated access.** The account, subscription, and the
+   user's catalog are all at stake.
 
-Y sobre todo: el export multitrack **es un click**. Automatizarlo aporta poco.
+And above all: multitrack export **is one click**. Automating it gains
+little.
 
-La operación va por navegador con la sesión del usuario; el MCP aporta
-diagnóstico local y verificación.
+Operation goes through the browser with the user's session; the MCP
+provides local diagnostics and verification.
 
-## Qué trae
+## What it includes
 
-**MCP `suno`** (stdio, sin pip, sin red):
+**MCP `suno`** (stdio, no pip, no network):
 
-| Tool | Qué hace |
+| Tool | What it does |
 |---|---|
-| `suno_auth_status` | handle, plan, expiración; y si la sesión sería renovable (casi siempre no) |
-| `suno_inspect_multitrack` | analiza un zip exportado sin extraerlo: tracks, tamaños, alineación, stems faltantes |
-| `suno_verify_stem` | RMS por bandas para confirmar que un stem es lo que dice |
+| `suno_auth_status` | handle, plan, expiration; and whether the session would be renewable (almost always not) |
+| `suno_inspect_multitrack` | analyzes an exported zip without extracting it: tracks, sizes, alignment, missing stems |
+| `suno_verify_stem` | RMS by band to confirm a stem is what it claims to be |
 
-**Comandos:** `/suno:auth`, `/suno:stems`
-**Skills:** `suno-studio` (el DAW y el export), `suno-browser` (operación segura
-en navegador y todo lo que está fuera del Studio).
+**Commands:** `/suno:auth`, `/suno:stems`
+**Skills:** `suno-studio` (the DAW and export), `suno-browser` (safe
+browser operation and everything outside the Studio).
 
-## Precondición
+## Precondition
 
-`suno.com.cookies.json` en la raíz del repo (o `SUNO_COOKIES`). Si el token
-venció **no es un bloqueo para trabajar por navegador**: alcanza con que el
-usuario abra `suno.com` logueado y se renueva sola. El hook de `SessionStart`
-avisa cuando corresponde.
+`suno.com.cookies.json` at the repo root (or `SUNO_COOKIES`). If the token
+expired, **that is not a blocker for working via browser**: it's enough
+for the user to open `suno.com` logged in, and it renews itself. The
+`SessionStart` hook warns when relevant.
 
-## Los stems
+## The stems
 
-Suno Studio separa **solo** al cargar una canción, en 7 pistas: Vocals, Backing
-Vocals, Drums, Bass, Guitar, Synth (más el mix). `Export → Multitrack` da un zip
-con un **WAV PCM float32 48 kHz** por pista, todos del mismo largo exacto y
-listos para un DAW.
+Suno Studio separates **only** when a song is loaded, into 7 tracks:
+Vocals, Backing Vocals, Drums, Bass, Guitar, Synth (plus the mix).
+`Export → Multitrack` gives a zip with one **32-bit float PCM WAV at
+48 kHz** per track, all the exact same length and ready for a DAW.
 
-Pesa: ~421 MB para un tema de 3 minutos. Hay que esperar, no reintentar.
+Weight: ~421 MB for a 3-minute track. You need to wait, not retry.
 
-## Reglas duras
+## Hard rules
 
-- **Nunca** tocar un control de reproducción.
-- **Nunca** resolver un CAPTCHA o challenge de Cloudflare.
-- **Nunca** publicar una canción sin pedido explícito (el feed de Suno es público).
-- Confirmar todo lo que consuma créditos o modifique la cuenta.
+- **Never** touch a playback control.
+- **Never** solve a CAPTCHA or Cloudflare challenge.
+- **Never** publish a song without an explicit request (Suno's feed is public).
+- Confirm anything that consumes credits or modifies the account.

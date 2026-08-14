@@ -1,7 +1,7 @@
-# _template — armar un plugin nuevo
+# _template — build a new plugin
 
-Esqueleto **funcional** de un plugin de este marketplace. No es pseudocódigo:
-corre tal cual. Probalo antes de tocar nada:
+**Functional** skeleton of a plugin for this marketplace. It's not
+pseudocode: it runs as-is. Try it before touching anything:
 
 ```bash
 printf '%s\n' \
@@ -10,75 +10,77 @@ printf '%s\n' \
   | python3 _template/mcp/server.py
 ```
 
-`_template` empieza con guion bajo y **no está listado en el marketplace**, así
-que no se instala por accidente.
+`_template` starts with an underscore and **is not listed in the
+marketplace**, so it never gets installed by accident.
 
-## Las dos capas
+## The two layers
 
-Antes de escribir una línea, ubicá cada cosa en su lugar:
+Before writing a line, place each thing where it belongs:
 
-| Capa | Qué va | ¿Sirve para cualquiera? |
+| Layer | What goes there | Works for anyone? |
 |---|---|---|
-| **core** — `lib/`, `mcp/`, `skills/`, `commands/` | auth, ritmo, endpoints, tools | **sí** |
-| **pack** — `packs/<proyecto>/` | ids de tus herramientas, presets, prompts | **no**, es tuyo |
+| **core** — `lib/`, `mcp/`, `skills/`, `commands/` | auth, pacing, endpoints, tools | **yes** |
+| **pack** — `packs/<project>/` | your tool ids, presets, prompts | **no**, it's yours |
 
-**Si otra persona no puede usarlo tal cual, es un pack.** Ver
+**If someone else can't use it as-is, it's a pack.** See
 [`packs/README.md`](./packs/README.md).
 
-El core tiene que funcionar sin ningún pack. Un pack agrega atajos, no
-capacidades.
+The core has to work without any pack. A pack adds shortcuts, not
+capabilities.
 
-## Receta
+## Recipe
 
 ```bash
-cp -R _template mi-servicio
-cd mi-servicio
+cp -R _template my-service
+cd my-service
 ```
 
-1. **`lib/service.py`** — cambiá `SERVICE`, `BASE`, `COOKIE_FILENAME`. Adaptá
-   `auth_status()` al esquema real (si hay JWT, decodificalo y devolvé
-   `expires_in_seconds`). Dejá `_throttle` como está.
-2. **`mcp/server.py`** — cambiá `SERVER_NAME`, reemplazá las tools de ejemplo.
-   La capa JSON-RPC no se toca.
-3. **`.claude-plugin/plugin.json`** y **`.mcp.json`** — nombre, descripción,
-   comandos.
-4. **`skills/<servicio>/SKILL.md`** — cuándo usar el plugin, precondición de
-   auth, cuidados, mapa de la API, flujos de navegador.
-5. **`commands/auth.md`** — el flujo de renovación de credenciales.
-6. **`hooks/preflight.py`** — chequeo local de sesión al arrancar.
-7. **`doctor.py`** — verificación de instalación.
-8. Agregá la entrada en `../.claude-plugin/marketplace.json`.
+1. **`lib/service.py`** — change `SERVICE`, `BASE`, `COOKIE_FILENAME`. Adapt
+   `auth_status()` to the real schema (if there's a JWT, decode it and return
+   `expires_in_seconds`). Leave `_throttle` as is.
+2. **`mcp/server.py`** — change `SERVER_NAME`, replace the example tools.
+   The JSON-RPC layer stays untouched.
+3. **`.claude-plugin/plugin.json`** and **`.mcp.json`** — name, description,
+   commands.
+4. **`skills/<service>/SKILL.md`** — when to use the plugin, auth
+   precondition, behavior rules, API map, browser flows.
+5. **`commands/auth.md`** — the credential-renewal flow.
+6. **`hooks/preflight.py`** — local session check on startup.
+7. **`doctor.py`** — installation check.
+8. Add the entry in `../.claude-plugin/marketplace.json`.
 
-Verificá con `python3 mi-servicio/doctor.py`.
+Verify with `python3 my-service/doctor.py`.
 
-## Reglas que no son negociables
+## Non-negotiable rules
 
-Están en el core porque son la diferencia entre una cuenta sana y una bloqueada:
+These live in the core because they're the difference between a healthy
+account and a banned one:
 
-- **Ritmo pausado.** `_throttle` en toda request. Nada de ráfagas, reintentos
-  rápidos ni descargas en paralelo.
-- **Credenciales fuera del repo.** `~/.config/<plugin>/`, permisos `600`, y en
-  `.gitignore`. Nunca en un pack, nunca en el chat.
-- **Un path explícito que no existe es un error**, no una invitación a buscar en
-  otro lado: usar la cuenta equivocada en silencio es peor que fallar.
-- **Los errores de auth no se reintentan.** Se le pide al usuario que reexporte.
-- **No se evade la detección de bots**, ni CAPTCHAs, ni un 403. Si una puerta
-  está cerrada a propósito, está cerrada.
-- **Confirmar antes de gastar créditos** o de cualquier acción irreversible.
-- **Nunca reproducir audio** para "verificar": medir con `ffprobe`/`ffmpeg`.
+- **Slow, paced requests.** `_throttle` on every request. No bursts, no fast
+  retries, no parallel downloads.
+- **Credentials outside the repo.** `~/.config/<plugin>/`, `600`
+  permissions, and in `.gitignore`. Never in a pack, never in the chat.
+- **An explicit path that doesn't exist is an error**, not an invitation to
+  look elsewhere: silently using the wrong account is worse than failing.
+- **Auth errors are never retried.** The user is asked to re-export.
+- **No evading bot detection**, no CAPTCHAs, no 403. If a door is closed on
+  purpose, it stays closed.
+- **Confirm before spending credits** or any irreversible action.
+- **Never play audio** to "verify": measure with `ffprobe`/`ffmpeg`.
 
-## Decidir MCP o navegador
+## Deciding MCP or browser
 
-No todo servicio merece un cliente HTTP. Antes de escribirlo, respondé:
+Not every service deserves an HTTP client. Before writing one, answer:
 
-1. **¿La sesión se puede renovar sin el navegador?** Si el export de cookies no
-   trae con qué refrescar, un cliente se muere en una hora. (Le pasa a `suno`.)
-2. **¿Hay protección anti-bot?** Sin el clearance del navegador, las requests de
-   script disparan challenges.
-3. **¿Los términos permiten acceso automatizado?**
-4. **¿Cuánto ahorra realmente?** Si la acción es un click, automatizarla aporta
-   poco y arriesga la cuenta.
+1. **Can the session be renewed without the browser?** If the cookie export
+   doesn't bring anything to refresh with, a client dies within the hour.
+   (Happens to `suno`.)
+2. **Is there anti-bot protection?** Without the browser's clearance, script
+   requests trigger challenges.
+3. **Does the ToS allow automated access?**
+4. **How much does it really save?** If the action is a single click,
+   automating it gains little and risks the account.
 
-Con dos "no", el plugin va por navegador y el MCP se limita a diagnóstico local
-y verificación de lo descargado — que es exactamente lo que hace `suno`.
-Con cuatro "sí", cliente HTTP, como `flow-music`.
+With two "no"s, the plugin goes through the browser and the MCP is limited
+to local diagnostics and verifying what was downloaded — exactly what
+`suno` does. With four "yes"s, an HTTP client, like `flow-music`.

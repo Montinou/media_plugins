@@ -1,40 +1,41 @@
 ---
-description: Bajar los stems de un tema de Flow Music, bass incluido, y verificarlos
-argument-hint: "[título o source_clip_id] [carpeta destino opcional]"
+description: Download the stems of a Flow Music track, bass included, and verify them
+argument-hint: "[title or source_clip_id] [optional destination folder]"
 ---
 
 # /flowmusic:stems
 
-Baja los cuatro stems (`vocals`, `drums`, `bass`, `other`) de un tema y verifica
-que cada archivo contenga lo que dice.
+Downloads the four stems (`vocals`, `drums`, `bass`, `other`) of a track and
+verifies each file contains what it claims to.
 
-Argumentos: `$ARGUMENTS` — título (o parte) o `source_clip_id`, y opcionalmente
-la carpeta destino. Si viene vacío, listá y preguntá.
+Arguments: `$ARGUMENTS` — title (or part of it) or `source_clip_id`, and
+optionally the destination folder. If empty, list and ask.
 
-## Pasos
+## Steps
 
-1. **Precondición.** `flowmusic_auth_status`. Si no se cumple, ejecutá
-   `/flowmusic:auth` y frená acá.
+1. **Precondition.** `flowmusic_auth_status`. If it isn't met, run
+   `/flowmusic:auth` and stop here.
 
-2. **Ubicá el tema.** `flowmusic_list_stems` lista los que ya tienen stems.
+2. **Find the track.** `flowmusic_list_stems` lists the ones that already
+   have stems.
 
-   - Sin argumento → mostrá la lista y preguntá cuál.
-   - Con argumento que no aparece → decilo claro: el tema existe pero **no tiene
-     stems todavía**, y hay que correr **Split stems** en la web
-     (`https://www.flowmusic.app/`, menú `···` del clip → *Split stems*, ~30 s).
-     Eso el MCP no lo dispara.
-   - Ambiguo → mostrá los candidatos y preguntá.
+   - No argument → show the list and ask which one.
+   - Argument given that doesn't show up → say it clearly: the track exists
+     but **doesn't have stems yet**, and you need to run **Split stems** on
+     the web (`https://www.flowmusic.app/`, clip's `···` menu → *Split
+     stems*, ~30 s). The MCP doesn't trigger that.
+   - Ambiguous → show the candidates and ask.
 
-3. **Mostrá antes de bajar.** `flowmusic_stem_urls` con el tema elegido.
-   Confirmá con el usuario el destino si no es `~/Downloads`.
+3. **Show before downloading.** `flowmusic_stem_urls` with the chosen track.
+   Confirm the destination with the user if it isn't `~/Downloads`.
 
-4. **Bajá.** `flowmusic_download_stems`. Van secuenciales y espaciadas: no
-   paralelices ni reintentes rápido si una falla.
+4. **Download.** `flowmusic_download_stems`. They go sequentially and spaced
+   out: don't parallelize or retry quickly if one fails.
 
-5. **Verificá.** No confíes en el nombre del archivo:
+5. **Verify.** Don't trust the file name:
 
    ```bash
-   cd <carpeta destino>
+   cd <destination folder>
    for f in *_bass.m4a *_drums.m4a *_vocals.m4a *_other.m4a; do
      [ -f "$f" ] || continue
      lo=$(ffmpeg -hide_banner -i "$f" -af "lowpass=f=250,astats=measure_perchannel=none" -f null - 2>&1 | grep "RMS level" | head -1 | awk '{print $NF}')
@@ -43,15 +44,17 @@ la carpeta destino. Si viene vacío, listá y preguntá.
    done
    ```
 
-   Esperado: **bass** con graves dominando ~14 dB y **drums** ~10 dB; **vocals**
-   y **other** al revés. Si el bass no domina en graves, decilo — algo salió mal.
+   Expected: **bass** with low end dominating ~14 dB and **drums** ~10 dB;
+   **vocals** and **other** the other way around. If the bass doesn't
+   dominate in low end, say so — something went wrong.
 
-6. **Informá** rutas, tamaños y el resultado de la verificación. Si faltó algún
-   stem, nombralo explícitamente en lugar de dejarlo pasar.
+6. **Report** paths, sizes, and the verification result. If any stem was
+   missing, name it explicitly instead of letting it slide.
 
-## Recordatorios
+## Reminders
 
-- **No reproduzcas** ninguno de los archivos para "chequear".
-- Si el bass falla con 403 por la vía del bucket, **pará**: no busques otra ruta.
-- ffmpeg es necesario para el paso 5; si no está, informalo y entregá igual los
-  archivos, aclarando que quedaron sin verificar.
+- **Don't play** any of the files to "check" them.
+- If the bass fails with 403 through the bucket route, **stop**: don't look
+  for another route.
+- ffmpeg is required for step 5; if it isn't available, say so and deliver
+  the files anyway, noting they went unverified.

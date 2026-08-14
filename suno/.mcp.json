@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "python3",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.py"],
-      "note": "Servidor local sin dependencias de pip. NINGUNA tool hace requests a Suno: solo diagnóstico de sesión (lee el JWT del JSON de cookies) y verificación de audio ya descargado (vía ffmpeg). La operación real va por navegador — ver la skill suno-browser."
+      "note": "Local server with no pip dependencies. NO tool makes requests to Suno: only session diagnostics (reads the JWT from the cookies JSON) and verification of already-downloaded audio (via ffmpeg). The actual operation goes through the browser — see the suno-browser skill."
     }
   }
 }

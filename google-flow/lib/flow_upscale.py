@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Upscale local de assets generados en Flow.
+"""Local upscale for assets generated in Flow.
 
-Por qué local y no el 2K nativo de Flow:
+Why local instead of Flow's native 2K:
 
-  1. `/v1/flow/upsampleImage` exige un token de reCAPTCHA Enterprise que sólo
-     produce el frontend, así que devuelve 403 desde cualquier cliente propio.
-  2. Consume créditos (el frontend chequea `hasEnoughCredits` antes de ofrecerlo).
-  3. Para pixel art un upscaler neuronal es contraproducente: interpola bordes
-     que el arte necesita duros. Nearest-neighbor con factor entero es la
-     operación correcta — reversible, sin pérdida y sin costo.
+  1. `/v1/flow/upsampleImage` requires a reCAPTCHA Enterprise token that only
+     the frontend can produce, so it returns 403 from any standalone client.
+  2. It spends credits (the frontend checks `hasEnoughCredits` before offering it).
+  3. For pixel art a neural upscaler is counterproductive: it interpolates
+     edges the art needs sharp. Nearest-neighbor with an integer factor is
+     the correct operation — reversible, lossless, and free.
 
-Para arte no-pixelado (fondos pintados, ilustración) usar --filter lanczos.
+For non-pixel art (painted backgrounds, illustration) use --filter lanczos.
 
-Uso:
-    python3 tools/flow/flow_upscale.py entrada.png -f 2
-    python3 tools/flow/flow_upscale.py entrada.png --target-width 2560
-    python3 tools/flow/flow_upscale.py carpeta/ -f 2 --suffix @2x
+Usage:
+    python3 tools/flow/flow_upscale.py input.png -f 2
+    python3 tools/flow/flow_upscale.py input.png --target-width 2560
+    python3 tools/flow/flow_upscale.py folder/ -f 2 --suffix @2x
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ from pathlib import Path
 from PIL import Image
 
 FILTERS = {
-    "nearest": Image.NEAREST,  # pixel art: preserva bordes duros
-    "lanczos": Image.LANCZOS,  # arte pintado / fotográfico
+    "nearest": Image.NEAREST,  # pixel art: preserves sharp edges
+    "lanczos": Image.LANCZOS,  # painted / photographic art
     "bicubic": Image.BICUBIC,
 }
 
@@ -43,12 +43,12 @@ def upscale(
 
     if target_width:
         if filt == "nearest" and target_width % w:
-            # Un factor fraccionario con nearest duplica columnas de forma
-            # despareja y arruina la grilla del pixel art.
+            # A fractional factor with nearest duplicates columns unevenly
+            # and wrecks the pixel art grid.
             factor = max(1, round(target_width / w))
             print(
-                f"  ! {target_width}px no es múltiplo entero de {w}px; "
-                f"uso factor {factor}x ({w * factor}px) para no romper la grilla"
+                f"  ! {target_width}px isn't an integer multiple of {w}px; "
+                f"using factor {factor}x ({w * factor}px) to keep the grid intact"
             )
             new = (w * factor, h * factor)
         else:
@@ -57,7 +57,7 @@ def upscale(
     elif factor:
         new = (w * factor, h * factor)
     else:
-        raise ValueError("hay que dar --factor o --target-width")
+        raise ValueError("must pass --factor or --target-width")
 
     out = img.resize(new, FILTERS[filt])
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -66,22 +66,22 @@ def upscale(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Upscale local, sin costo")
-    ap.add_argument("src", help="archivo PNG o carpeta")
-    ap.add_argument("-f", "--factor", type=int, help="factor entero (2, 3, 4...)")
-    ap.add_argument("--target-width", type=int, help="ancho destino en px")
+    ap = argparse.ArgumentParser(description="Local upscale, no cost")
+    ap.add_argument("src", help="PNG file or folder")
+    ap.add_argument("-f", "--factor", type=int, help="integer factor (2, 3, 4...)")
+    ap.add_argument("--target-width", type=int, help="destination width in px")
     ap.add_argument(
         "--filter", choices=list(FILTERS), default="nearest",
-        help="nearest para pixel art (default), lanczos para arte pintado",
+        help="nearest for pixel art (default), lanczos for painted art",
     )
-    ap.add_argument("--suffix", default="@2x", help="sufijo del archivo salida")
-    ap.add_argument("-o", "--out", help="carpeta destino")
+    ap.add_argument("--suffix", default="@2x", help="output file suffix")
+    ap.add_argument("-o", "--out", help="destination folder")
     args = ap.parse_args()
 
     src = Path(args.src)
     files = sorted(src.glob("*.png")) if src.is_dir() else [src]
     if not files:
-        raise SystemExit(f"sin PNGs en {src}")
+        raise SystemExit(f"no PNGs in {src}")
 
     for f in files:
         out_dir = Path(args.out) if args.out else f.parent

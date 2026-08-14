@@ -1,15 +1,16 @@
 ---
-description: Estado de la sesión de Google Labs Flow, créditos y applets propios
+description: Google Labs Flow session status, credits, and your own applets
 ---
 
-Revisá el estado del puente a Google Labs Flow y reportá en pocas líneas:
+Check the status of the bridge to Google Labs Flow and report back in a few
+lines:
 
-1. Llamá a `flow_session_status` — usuario, vencimiento de la sesión y créditos.
-2. Llamá a `flow_list_applets` con `mine_only: true` — cuántas herramientas
-   propias hay y cuáles se tocaron más recientemente.
+1. Call `flow_session_status` — user, session expiration, and credits.
+2. Call `flow_list_applets` with `mine_only: true` — how many of your own
+   tools there are and which were touched most recently.
 
-Si el paso 1 falla con error de autenticación, no sigas: decile al usuario que
-la cookie venció y que hay que reexportar `labs.google.cookies.json` desde el
-navegador a la raíz del repo.
+If step 1 fails with an auth error, don't continue: tell the user the cookie
+expired and that `labs.google.cookies.json` needs to be re-exported from the
+browser to the repo root.
 
-No generes nada ni corras batches; esto es sólo un chequeo.
+Don't generate anything or run batches; this is just a check.

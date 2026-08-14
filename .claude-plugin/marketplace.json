@@ -4,14 +4,14 @@
     "name": "Montinou"
   },
   "metadata": {
-    "description": "Plugins para producir audio e imagen con herramientas de IA que no exponen API pública",
+    "description": "Plugins for producing audio and image with AI tools that do not expose a public API",
     "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "google-flow",
       "source": "./google-flow",
-      "description": "Google Labs Flow: leer y conducir los applets propios, generar assets en batch y upscalear sin costo. Core genérico; lo específico de cada proyecto vive en packs/.",
+      "description": "Google Labs Flow: read and drive your own applets, generate assets in batch, and upscale for free. Generic core; project-specific details live in packs/.",
       "author": {
         "name": "Montinou"
       },
@@ -31,7 +31,7 @@
     {
       "name": "flow-music",
       "source": "./flow-music",
-      "description": "Google Flow Music: cuenta y créditos, catálogo de canciones y descarga de stems —el de bass incluido— por la API. MCP server, precondición de autenticación y guía de comportamiento.",
+      "description": "Google Flow Music: account and credits, song catalog, and stem download —bass included— via the API. MCP server, authentication precondition, and behavior guide.",
       "author": {
         "name": "Montinou"
       },
@@ -49,7 +49,7 @@
     {
       "name": "suno",
       "source": "./suno",
-      "description": "Suno con criterio: Studio 2.0 (DAW multipista y export de stems en WAV), operación por navegador y verificación local de lo descargado. El MCP no toca la red por diseño.",
+      "description": "Suno done right: Studio 2.0 (multitrack DAW and WAV stem export), browser-driven operation, and local verification of what gets downloaded. The MCP never touches the network by design.",
       "author": {
         "name": "Montinou"
       },

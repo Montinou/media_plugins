@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Precondición de autenticación de Flow Music, al arrancar la sesión.
+"""Flow Music authentication precondition, run at session start.
 
-Es puramente local: lee el JSON de cookies y decodifica el JWT. No toca la red,
-así que no cuesta nada ni delata actividad. Solo habla cuando hay algo que
-hacer — si la sesión está sana, se calla.
+Purely local: reads the cookies JSON and decodes the JWT. Doesn't touch the
+network, so it costs nothing and gives away no activity. Only speaks up when
+there's something to do — if the session is healthy, it stays quiet.
 """
 from __future__ import annotations
 
@@ -31,13 +31,14 @@ def main() -> int:
     try:
         from flowmusic import FlowMusic, FlowMusicAuthError
     except Exception:
-        return 0  # el plugin no debe romper la sesión por un problema propio
+        return 0  # the plugin shouldn't break the session over its own problem
 
     try:
         st = FlowMusic().auth_status()
     except FlowMusicAuthError:
-        # Sin cookies no hay nada que avisar: el usuario quizá no use el plugin
-        # en esta sesión. Las tools ya explican qué hacer si las invoca.
+        # No cookies means there's nothing to warn about: the user may not
+        # use the plugin in this session. The tools already explain what to
+        # do if invoked.
         return 0
     except Exception:
         return 0
@@ -47,19 +48,19 @@ def main() -> int:
 
     if st["can_refresh"]:
         emit(
-            "[flowmusic] El access_token de Flow Music está vencido, pero hay "
-            "refresh_token: las tools lo renuevan solas en la primera llamada. "
-            "No hace falta molestar al usuario."
+            "[flowmusic] Flow Music's access_token has expired, but there's a "
+            "refresh_token: the tools will renew it themselves on the next "
+            "call. No need to bother the user."
         )
         return 0
 
     emit(
-        "[flowmusic] PRECONDICIÓN NO CUMPLIDA: la sesión de Flow Music venció y "
-        "no se puede renovar sola.\n"
-        "Antes de usar cualquier tool `flowmusic_*`, pedile al usuario que "
-        "reexporte las cookies de www.flowmusic.app (con la sesión iniciada) a "
-        "`www.flowmusic.app.cookies.json` en la raíz del repo. No intentes "
-        "operar ni reintentar hasta que confirme."
+        "[flowmusic] PRECONDITION NOT MET: the Flow Music session expired and "
+        "can't refresh itself.\n"
+        "Before using any `flowmusic_*` tool, ask the user to re-export the "
+        "cookies from www.flowmusic.app (while logged in) to "
+        "`www.flowmusic.app.cookies.json` at the repo root. Don't try to "
+        "operate or retry until they confirm."
     )
     return 0
 

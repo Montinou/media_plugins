@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
-"""Packs: la parte de google-flow que es de cada cuenta.
+"""Packs: the part of google-flow that belongs to each account.
 
-El plugin es genérico —las tools funcionan con cualquier cuenta y cualquier
-applet— pero tres cosas son irreductiblemente propias de quien lo usa:
+The plugin is generic — its tools work with any account and any applet —
+but three things are irreducibly specific to whoever uses it:
 
-    projectId    el proyecto de Flow, que va en la URL de cada applet
-    appletIds    los identificadores de sus herramientas
-    vocabularios los valores válidos de los dropdowns de esas herramientas
+    projectId    the Flow project, which goes in every applet's URL
+    appletIds    the identifiers of its tools
+    vocabularies the valid values for those tools' dropdowns
 
-Un pack agrupa eso en un directorio, para que el plugin no traiga hardcodeado
-el proyecto de nadie:
+A pack groups that into a directory, so the plugin doesn't ship anyone's
+project hardcoded:
 
     <pack>/
-    ├── pack.json          projectId, applets y sus controles
-    ├── applets.md         notas sobre qué hace cada herramienta
-    └── recipes/*.json     recetas listas para usar
+    ├── pack.json          projectId, applets, and their controls
+    ├── applets.md         notes on what each tool does
+    └── recipes/*.json     ready-to-use recipes
 
-`flow_scaffold_pack` genera uno leyendo la cuenta: descubre el proyecto, lista
-los applets, baja su código y extrae los vocabularios de `constants.ts`.
+`flow_scaffold_pack` generates one by reading the account: discovers the
+project, lists the applets, downloads their code, and extracts the
+vocabularies from `constants.ts`.
 """
 from __future__ import annotations
 
@@ -32,16 +33,16 @@ import flow_client
 PACK_FILE = "pack.json"
 
 
-# ------------------------------------------------------------------ ubicación
+# ------------------------------------------------------------------ location
 
 
 def pack_dir() -> Path | None:
-    """Directorio del pack activo, o None si no hay ninguno configurado."""
+    """Active pack's directory, or None if none is configured."""
     env = os.environ.get("FLOW_PACK")
     if env:
         p = Path(env).expanduser()
         return p if (p / PACK_FILE).exists() else None
-    # packs/<nombre> junto a la lib, elegido por FLOW_PACK_NAME
+    # packs/<name> next to the lib, chosen via FLOW_PACK_NAME
     name = os.environ.get("FLOW_PACK_NAME")
     if name:
         p = Path(__file__).resolve().parent.parent / "packs" / name
@@ -59,7 +60,7 @@ def load_pack() -> dict | None:
 
 
 def project_id(explicit: str | None = None) -> str:
-    """Resuelve el projectId: parámetro, entorno, pack. Sin default inventado."""
+    """Resolves the projectId: parameter, environment, pack. No made-up default."""
     if explicit:
         return explicit
     if os.environ.get("FLOW_PROJECT_ID"):
@@ -68,9 +69,9 @@ def project_id(explicit: str | None = None) -> str:
     if pack and pack.get("projectId"):
         return pack["projectId"]
     raise RuntimeError(
-        "no sé con qué proyecto de Flow trabajar. Definí FLOW_PROJECT_ID, o "
-        "generá un pack con flow_scaffold_pack, o pasá project_id explícito. "
-        "El id está en la URL: labs.google/fx/tools/flow/project/<projectId>/…"
+        "don't know which Flow project to work with. Set FLOW_PROJECT_ID, or "
+        "generate a pack with flow_scaffold_pack, or pass an explicit "
+        "project_id. The id is in the URL: labs.google/fx/tools/flow/project/<projectId>/…"
     )
 
 
@@ -100,13 +101,13 @@ def load_recipe(name: str) -> dict:
     d = pack_dir()
     if d is None:
         raise RuntimeError(
-            "no hay pack activo: definí FLOW_PACK o pasá la receta completa."
+            "no active pack: set FLOW_PACK or pass the full recipe."
         )
     f = (d / "recipes" / f"{name}.json") if not name.endswith(".json") else Path(name)
     if not f.exists():
         available = [r["name"] for r in list_recipes()]
         raise RuntimeError(
-            f"no existe la receta {name!r} en el pack. Disponibles: {available}"
+            f"recipe {name!r} doesn't exist in the pack. Available: {available}"
         )
     return json.loads(f.read_text())
 
@@ -119,14 +120,14 @@ def _matrix_size(recipe: dict) -> int:
     return n if m else 1
 
 
-# ----------------------------------------------------------------- descubrir
+# ----------------------------------------------------------------- discovery
 
 
 def discover_project_id(headless: bool = True) -> str:
-    """Descubre el projectId abriendo Flow y viendo a qué proyecto entra.
+    """Discovers the projectId by opening Flow and seeing which project it lands on.
 
-    No hay endpoint de listado accesible con el bearer, pero la app redirige a
-    un proyecto al abrirla, y el id queda en la URL.
+    There's no listing endpoint accessible with the bearer, but the app
+    redirects to a project when you open it, and the id ends up in the URL.
     """
     from playwright.sync_api import sync_playwright
 
@@ -143,7 +144,7 @@ def discover_project_id(headless: bool = True) -> str:
         page.wait_for_timeout(4000)
         found = re.search(r"/project/([0-9a-f-]{36})", page.url)
         if not found:
-            # si no redirigió, buscar un link a un proyecto en la página
+            # if it didn't redirect, look for a link to a project on the page
             href = page.evaluate(
                 "() => { const a = Array.from(document.querySelectorAll('a'))"
                 ".find(a => /\\/project\\/[0-9a-f-]{36}/.test(a.href));"
@@ -155,21 +156,21 @@ def discover_project_id(headless: bool = True) -> str:
 
     if not found:
         raise RuntimeError(
-            "no pude descubrir el projectId. Abrí labs.google/fx/tools/flow, "
-            "entrá a un proyecto y copiá el id de la URL."
+            "couldn't discover the projectId. Open labs.google/fx/tools/flow, "
+            "go into a project, and copy the id from the URL."
         )
     return found.group(1)
 
 
-# ---------------------------------------------------------------- extracción
+# ---------------------------------------------------------------- extraction
 
 
 def extract_vocabulary(code_files: list[dict]) -> dict[str, Any]:
-    """Saca de `constants.ts` las listas y objetos que alimentan los dropdowns.
+    """Pulls the lists and objects that feed the dropdowns out of `constants.ts`.
 
-    Los applets de Flow declaran sus opciones como arrays de strings o como
-    objetos cuyas claves son las etiquetas visibles. No se ejecuta el código:
-    se leen los literales, que es suficiente y no corre nada ajeno.
+    Flow applets declare their options as arrays of strings or as objects
+    whose keys are the visible labels. The code isn't executed: the literals
+    are read directly, which is enough and doesn't run anything foreign.
     """
     vocab: dict[str, Any] = {}
     for f in code_files:
@@ -208,12 +209,12 @@ def _balanced(src: str, start: int, opener: str) -> str | None:
     return None
 
 
-# Los FieldDropdown cierran con un icono de chevron, y el nombre del icono
-# varía entre applets según qué set de Material Symbols usó el generador.
+# FieldDropdowns end with a chevron icon, and the icon's name varies between
+# applets depending on which Material Symbols set the generator used.
 CHEVRONS = {"keyboard_arrow_down", "expand_more", "arrow_drop_down"}
 
-# Verbos con los que los applets nombran su acción principal, en los idiomas en
-# que se los suele escribir. Es más confiable que la posición del botón.
+# Verbs applets use to name their main action, in the languages they tend to
+# be written in. More reliable than the button's position.
 ACTION_VERB = re.compile(
     r"^(generar|generate|forjar|forge|crear|create|compilar|compile|build|"
     r"render|renderizar|export|exportar|procesar|process|analizar|analyze)\b",
@@ -222,11 +223,11 @@ ACTION_VERB = re.compile(
 
 
 def inspect_live(applet_id: str, project_id: str, headless: bool = True) -> dict:
-    """Controles reales del applet, leídos de la UI montada.
+    """Real controls of the applet, read from the mounted UI.
 
-    Deducirlos del JSX con expresiones regulares no es confiable: el orden de
-    los props varía, hay componentes envueltos, y el texto del botón se arma en
-    runtime. La UI montada es la única fuente que no miente.
+    Deducing them from the JSX with regular expressions isn't reliable: prop
+    order varies, there are wrapped components, and the button text is built
+    at runtime. The mounted UI is the only source that doesn't lie.
     """
     import flow_driver
 
@@ -242,26 +243,26 @@ def inspect_live(applet_id: str, project_id: str, headless: bool = True) -> dict
         if not lines:
             continue
         if lines[-1] in CHEVRONS and len(lines) >= 3:
-            # "Label", "Valor", chevron
+            # "Label", "Value", chevron
             controls.append(
                 {"type": "dropdown", "label": lines[0], "current": lines[-2]}
             )
             continue
-        # El resto son acciones. La primera línea suele ser el nombre del icono
-        # de Material Symbols (un token sin espacios), y el texto real va después.
+        # The rest are actions. The first line is usually the Material
+        # Symbols icon name (a token with no spaces), and the real text follows.
         label = lines[-1]
         if len(lines) == 1 and "_" in label and " " not in label:
-            continue  # sólo icono, sin texto: no es una acción nombrable
+            continue  # icon only, no text: not a nameable action
         actions.append({"label": label, "disabled": bool(b.get("disabled"))})
 
     for i in info.get("textInputs", []):
         if i.get("placeholder"):
             controls.append({"type": "text", "placeholder": i["placeholder"]})
 
-    # El botón de generar se reconoce por el verbo, no por la posición ni por
-    # estar habilitado: en varios applets arranca deshabilitado hasta que se
-    # sube una imagen, y quedarse con "la última habilitada" agarra un toggle
-    # de un segmented control.
+    # The generate button is recognized by its verb, not by position or by
+    # being enabled: several applets start disabled until an image is
+    # uploaded, and taking "the last enabled one" would grab a toggle from a
+    # segmented control.
     generate = None
     for a in actions:
         if ACTION_VERB.match(a["label"]):
@@ -291,7 +292,7 @@ def scaffold(
     headless: bool = True,
     inspect_ui: bool = True,
 ) -> dict:
-    """Genera un pack completo leyendo la cuenta de Flow del usuario."""
+    """Generates a full pack by reading the user's Flow account."""
     dest = Path(dest).expanduser()
     (dest / "recipes").mkdir(parents=True, exist_ok=True)
 
@@ -315,10 +316,10 @@ def scaffold(
 
     entries: dict[str, Any] = {}
     notes: list[str] = [
-        f"# Herramientas del pack `{name}`",
+        f"# Tools in pack `{name}`",
         "",
-        "Generado con `flow_scaffold_pack`. Editable a mano: lo que agregues acá",
-        "no se pierde salvo que vuelvas a generar sobre el mismo archivo.",
+        "Generated with `flow_scaffold_pack`. Editable by hand: anything you",
+        "add here isn't lost unless you regenerate over the same file.",
         "",
     ]
 
@@ -327,7 +328,7 @@ def scaffold(
         try:
             data = flow_client.get_applet(applet_id)
         except Exception as e:
-            notes.append(f"## {a.get('displayName')}\n\nNo pude leer el código: {e}\n")
+            notes.append(f"## {a.get('displayName')}\n\nCouldn't read the code: {e}\n")
             continue
         files = data.get("codeFiles") or []
         vocab = extract_vocabulary(files)
@@ -342,8 +343,8 @@ def scaffold(
                 blocked = live.get("disabledActions") or []
             except Exception as e:
                 notes.append(
-                    f"> No pude inspeccionar la UI de este applet: {e}\n"
-                    "> Completá `generateButton` y `controls` a mano.\n"
+                    f"> Couldn't inspect this applet's UI: {e}\n"
+                    "> Fill in `generateButton` and `controls` by hand.\n"
                 )
 
         slug = _slug(a.get("displayName") or applet_id)
@@ -363,29 +364,29 @@ def scaffold(
         if a.get("description"):
             notes.append(f"{a['description']}\n")
         if generate:
-            notes.append(f"Botón de generar: `{generate}`\n")
+            notes.append(f"Generate button: `{generate}`\n")
         else:
             notes.append(
-                "**Sin botón de generar detectado.** Completá `generateButton` "
-                "a mano en pack.json.\n"
+                "**No generate button detected.** Fill in `generateButton` "
+                "by hand in pack.json.\n"
             )
         if blocked:
             notes.append(
-                "Acciones deshabilitadas al abrir: "
+                "Actions disabled on open: "
                 + ", ".join(f"`{b}`" for b in blocked)
-                + ". Suelen necesitar un insumo previo, como una imagen "
-                "subida, así que este applet puede no ser automatizable todavía.\n"
+                + ". They usually need a prior input, like an uploaded "
+                "image, so this applet may not be automatable yet.\n"
             )
         if controls:
-            notes.append("| Control | Valores |")
+            notes.append("| Control | Values |")
             notes.append("|---|---|")
             for c in controls:
                 if c["type"] == "dropdown":
                     opts = _options_for(c["label"], vocab, c.get("current"))
-                    shown = " · ".join(opts[:12]) if opts else f"(actual: {c.get('current')})"
+                    shown = " · ".join(opts[:12]) if opts else f"(current: {c.get('current')})"
                     notes.append(f"| `{c['label']}` | {shown} |")
                 else:
-                    notes.append(f"| _texto_ | placeholder: `{c['placeholder']}` |")
+                    notes.append(f"| _text_ | placeholder: `{c['placeholder']}` |")
             notes.append("")
 
         recipe = _starter_recipe(entries[slug])
@@ -396,7 +397,7 @@ def scaffold(
 
     pack = {
         "name": name,
-        "description": f"Pack de Google Flow para la cuenta con proyecto {pid}",
+        "description": f"Google Flow pack for the account with project {pid}",
         "projectId": pid,
         "applets": entries,
     }
@@ -409,16 +410,17 @@ def scaffold(
         "projectIdDiscovered": discovered,
         "applets": len(entries),
         "recipes": [p.name for p in sorted((dest / "recipes").glob("*.json"))],
-        "next": "Revisá pack.json y ajustá las recetas; después probá con "
-        "flow_dryrun_recipe antes de generar.",
+        "next": "Review pack.json and adjust the recipes; then test with "
+        "flow_dryrun_recipe before generating.",
     }
 
 
 def _options_for(label: str, vocab: dict, current: str | None) -> list[str]:
-    """Elige la lista de constants.ts que contiene el valor actual del dropdown.
+    """Picks the constants.ts list that contains the dropdown's current value.
 
-    Une lo que se ve en la UI (el label y el valor seleccionado) con lo que
-    está declarado en el código, sin depender de cómo se llame la constante.
+    Ties together what's visible in the UI (the label and the selected
+    value) with what's declared in the code, without depending on the
+    constant's name.
     """
     if current:
         for values in vocab.values():
@@ -439,13 +441,13 @@ def _starter_recipe(entry: dict) -> dict | None:
                     {"type": "dropdown", "label": c["label"], "value": value}
                 )
     return {
-        "name": _slug(entry.get("displayName") or "receta"),
+        "name": _slug(entry.get("displayName") or "recipe"),
         "appletId": entry["appletId"],
         "generateButton": entry["generateButton"],
         "generateTimeoutSec": 420,
         "controls": controls,
-        "_comment": "Generada por flow_scaffold_pack con el primer valor de cada "
-        "dropdown. Ajustá los valores y agregá 'matrix' para generar en batch.",
+        "_comment": "Generated by flow_scaffold_pack with each dropdown's first "
+        "value. Adjust the values and add 'matrix' to generate in batch.",
     }
 
 

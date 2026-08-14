@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""Driver de ejecución para applets de Google Labs Flow.
+"""Execution driver for Google Labs Flow applets.
 
-Conduce un applet dentro de su iframe (same-origin) con Playwright: setea los
-controles, dispara la generación y captura el resultado.
+Drives an applet inside its iframe (same-origin) with Playwright: sets the
+controls, fires the generation, and captures the result.
 
-El upscale es un paso aparte: 2K/4K nativo vive en flow_api.py (necesita un
-Chrome real por reCAPTCHA) y el upscale local sin costo, en flow_upscale.py.
+Upscaling is a separate step: native 2K/4K lives in flow_api.py (needs a real
+Chrome because of reCAPTCHA), and the free local upscale lives in
+flow_upscale.py.
 
-No replica el protocolo de generación — que está detrás de reCAPTCHA — sino
-que usa la tool tal cual está publicada. Eso lo hace inmune a cambios internos
-del payload y respeta la lógica de prompts que vive en cada applet.
+It doesn't replicate the generation protocol — which sits behind reCAPTCHA —
+but uses the tool as published. That makes it immune to internal payload
+changes and respects the prompt logic that lives inside each applet.
 
-Uso:
+Usage:
     python3 tools/flow/flow_driver.py inspect <appletId>
     python3 tools/flow/flow_driver.py run <recipe.json> [-o dir]
     python3 tools/flow/flow_driver.py batch <recipe.json> [--limit N] [-o dir]
@@ -38,7 +39,7 @@ from flow_client import (  # noqa: E402
 
 
 def credits_balance() -> int | None:
-    """Saldo de créditos. Se consulta antes y después para medir el costo real."""
+    """Credit balance. Checked before and after to measure the real cost."""
     try:
         return sandbox("GET", "credits").get("credits")
     except Exception:
@@ -47,12 +48,12 @@ def credits_balance() -> int | None:
 OUT_ROOT = Path(os.environ.get("FLOW_OUT", Path.cwd() / "flow-out"))
 APPLET_FRAME_TITLE = "Flow App"
 
-# Ritmo deliberadamente humano. Google Labs no publica límites de uso, así que
-# el driver se mueve despacio a propósito: es preferible una corrida lenta a que
-# nos marquen la cuenta como automatizada.
-PACE_MS = 900          # pausa entre interacciones con controles
-PACE_RUN_S = 20        # pausa mínima entre ejecuciones consecutivas en batch
-POLL_RESULT_S = 4      # cada cuánto se mira si ya salió la imagen
+# Deliberately human pace. Google Labs doesn't publish usage limits, so the
+# driver moves slowly on purpose: a slow run beats getting the account
+# flagged as automated.
+PACE_MS = 900          # pause between interactions with controls
+PACE_RUN_S = 20        # minimum pause between consecutive runs in batch
+POLL_RESULT_S = 4      # how often to check whether the image is out yet
 
 
 
@@ -64,7 +65,7 @@ def applet_url(applet_id: str, project_id: str | None = None) -> str:
 
 
 class FlowDriver:
-    """Sesión de browser apuntada a un applet."""
+    """Browser session pointed at an applet."""
 
     def __init__(self, headless: bool = True, slow_mo: int = 0):
         self.headless = headless
@@ -103,7 +104,7 @@ class FlowDriver:
                 pass
         self.network.append(entry)
 
-    # ---------------------------------------------------------------- montaje
+    # ---------------------------------------------------------------- mounting
 
     def open(
         self, applet_id: str, timeout: int = 90000, project_id: str | None = None
@@ -113,15 +114,15 @@ class FlowDriver:
         return self.wait_for_applet()
 
     def wait_for_applet(self, timeout: float = 90.0) -> Frame:
-        """El applet se compila con esbuild.wasm en el browser; hay que esperarlo.
+        """The applet gets compiled with esbuild.wasm in the browser; wait for it.
 
-        No alcanza con que el iframe exista y tenga contenido: React monta los
-        controles después, y actuar en esa ventana da "no encontré un control
-        con label X" con una lista de botones vacía. Por eso la condición de
-        montado es que haya botones renderizados.
+        It's not enough for the iframe to exist and have content: React mounts
+        the controls afterward, and acting in that window gives "couldn't find
+        a control with label X" with an empty button list. That's why the
+        mounted condition is that there are rendered buttons.
         """
         deadline = time.time() + timeout
-        last_seen = "ningún iframe con título 'Flow App'"
+        last_seen = "no iframe titled 'Flow App'"
         while time.time() < deadline:
             for fr in self.page.frames:
                 if "recaptcha" in fr.url:
@@ -135,18 +136,18 @@ class FlowDriver:
                     if buttons > 0:
                         self.frame = fr
                         return fr
-                    last_seen = "el iframe montó pero todavía sin controles"
+                    last_seen = "the iframe mounted but still has no controls"
                 except Exception:
                     continue
             self.page.wait_for_timeout(1000)
         raise TimeoutError(
-            f"el applet no montó en {timeout}s ({last_seen})"
+            f"the applet didn't mount within {timeout}s ({last_seen})"
         )
 
-    # --------------------------------------------------------------- controles
+    # --------------------------------------------------------------- controls
 
     def describe(self) -> dict:
-        """Inventario de controles del applet, para escribir recetas."""
+        """Inventory of the applet's controls, for writing recipes."""
         return self.frame.evaluate("""() => {
             const txt = el => (el.innerText || '').trim();
             return {
@@ -161,15 +162,15 @@ class FlowDriver:
         }""")
 
     def set_dropdown(self, label: str, value: str) -> None:
-        """Abre el FieldDropdown cuyo label coincide y elige la opción pedida.
+        """Opens the FieldDropdown whose label matches and picks the requested option.
 
-        El trigger y las opciones son ambos <button>; se distinguen porque el
-        accessible name de una opción es exactamente el valor, mientras que el
-        del trigger incluye label, valor y el chevron.
+        The trigger and the options are both <button>; they're distinguished
+        because an option's accessible name is exactly the value, while the
+        trigger's includes the label, the value, and the chevron.
         """
         trigger, current = self._trigger_for(label)
         if value in current:
-            return  # ya está; abrir el menú al pedo puede tapar otros controles
+            return  # already set; opening the menu for nothing can cover other controls
         trigger.click()
         self.frame.wait_for_timeout(PACE_MS)
 
@@ -177,8 +178,8 @@ class FlowDriver:
         if idx < 0:
             opts = self._button_texts()
             raise RuntimeError(
-                f"no encontré la opción {value!r} en el dropdown {label!r}. "
-                f"Botones visibles: {opts}"
+                f"couldn't find the option {value!r} in the {label!r} dropdown. "
+                f"Visible buttons: {opts}"
             )
         self.frame.locator("button").nth(idx).click()
 
@@ -186,7 +187,7 @@ class FlowDriver:
         _, now = self._trigger_for(label)
         if value not in now:
             raise RuntimeError(
-                f"el dropdown {label!r} no quedó en {value!r} (muestra: {now!r})"
+                f"the {label!r} dropdown didn't end up at {value!r} (shows: {now!r})"
             )
 
     def _button_texts(self) -> list[str]:
@@ -196,10 +197,10 @@ class FlowDriver:
         )
 
     def _button_index(self, mode: str, needle: str) -> int:
-        """Índice del primer <button> cuyo innerText coincide con `needle`.
+        """Index of the first <button> whose innerText matches `needle`.
 
-        `mode` es "equals" (opción de menú) o "startsWith" (trigger, cuyo texto
-        sigue con el valor actual y el chevron).
+        `mode` is "equals" (menu option) or "startsWith" (trigger, whose text
+        continues with the current value and the chevron).
         """
         return self.frame.evaluate(
             """({mode, needle}) => Array.from(document.querySelectorAll('button'))
@@ -211,18 +212,18 @@ class FlowDriver:
         )
 
     def _trigger_for(self, label: str):
-        """El <button> del FieldDropdown cuyo label es `label`, y su texto actual.
+        """The FieldDropdown's <button> whose label is `label`, and its current text.
 
-        Se localiza por índice sobre innerText en vez de con `has_text`, porque
-        ese matcher es substring e insensible a mayúsculas: buscar "Acción"
-        engancharía también "Fa*cción* / Linaje". Acá el label debe estar al
-        principio del texto del control, que es donde el FieldDropdown lo pone.
+        Located by index over innerText instead of with `has_text`, because
+        that matcher is a case-insensitive substring: searching for "Acción"
+        would also match "Fa*cción* / Linaje". Here the label must be at the
+        start of the control's text, which is where FieldDropdown puts it.
         """
         idx = self._button_index("startsWith", label)
         if idx < 0:
             raise RuntimeError(
-                f"no encontré un control con label {label!r}. "
-                f"Botones: {self._button_texts()}"
+                f"couldn't find a control with label {label!r}. "
+                f"Buttons: {self._button_texts()}"
             )
         texts = self._button_texts()
         return self.frame.locator("button").nth(idx), texts[idx]
@@ -236,10 +237,10 @@ class FlowDriver:
     def click(self, button_text: str) -> None:
         self.frame.get_by_role("button").filter(has_text=button_text).first.click()
 
-    # ---------------------------------------------------------------- resultado
+    # ---------------------------------------------------------------- result
 
     def current_image_key(self) -> str | None:
-        """Huella de la imagen mostrada, para distinguir un resultado nuevo del anterior."""
+        """Fingerprint of the displayed image, to tell a new result from the previous one."""
         return self.frame.evaluate("""() => {
             const imgs = Array.from(document.querySelectorAll('img'))
                 .filter(i => (i.src||'').startsWith('data:image'));
@@ -254,11 +255,11 @@ class FlowDriver:
         poll: float = POLL_RESULT_S,
         ignore_key: str | None = None,
     ) -> dict:
-        """Espera una imagen resultado (data: URI) en el applet.
+        """Waits for a result image (data: URI) in the applet.
 
-        `ignore_key` es la huella del resultado anterior: en batch el applet
-        sigue mostrando la imagen previa mientras genera la nueva, así que sin
-        esto se devolvería dos veces el mismo asset.
+        `ignore_key` is the fingerprint of the previous result: in batch mode
+        the applet keeps showing the previous image while the new one
+        generates, so without this the same asset would be returned twice.
         """
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -276,7 +277,7 @@ class FlowDriver:
                 };
             }""")
             if got and ignore_key and got["key"] == ignore_key:
-                got = None  # todavía es el resultado anterior
+                got = None  # still the previous result
             if got and got["w"] > 64:
                 header, b64 = got["src"].split(",", 1)
                 mime = header.split(":")[1].split(";")[0]
@@ -294,16 +295,16 @@ class FlowDriver:
                 return el ? el.innerText.trim() : null;
             }""")
             if err:
-                raise RuntimeError(f"el applet reportó un error: {err}")
+                raise RuntimeError(f"the applet reported an error: {err}")
             self.page.wait_for_timeout(int(poll * 1000))
-        raise TimeoutError(f"sin imagen resultado tras {timeout}s")
+        raise TimeoutError(f"no result image after {timeout}s")
 
     def last_media_id(self) -> str | None:
-        """UUID del último `generatedImage.mediaId` visto en la red.
+        """UUID of the last `generatedImage.mediaId` seen on the network.
 
-        Sólo sirve el UUID: junto a él viaja un media-key largo codificado en
-        base64 que también se llama mediaId en otros nodos de la respuesta, y
-        ése el backend no lo acepta.
+        Only the UUID works: alongside it travels a long base64-encoded
+        media-key that's also called mediaId in other nodes of the response,
+        and the backend doesn't accept that one.
         """
         uuid_re = re.compile(
             r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -340,7 +341,7 @@ class FlowDriver:
         path.write_text(json.dumps(self.network, indent=2)[:5_000_000])
 
 
-# ------------------------------------------------------------------- recetas
+# ------------------------------------------------------------------- recipes
 
 
 def apply_controls(drv: "FlowDriver", recipe: dict) -> None:
@@ -350,29 +351,29 @@ def apply_controls(drv: "FlowDriver", recipe: dict) -> None:
             print(f"   dropdown {step['label']!r} = {step['value']!r}")
             drv.set_dropdown(step["label"], step["value"])
         elif kind == "text":
-            print(f"   texto {step['placeholder']!r}")
+            print(f"   text {step['placeholder']!r}")
             drv.fill(step["placeholder"], step["value"])
         else:
-            raise ValueError(f"tipo de control desconocido: {kind}")
+            raise ValueError(f"unknown control type: {kind}")
         drv.frame.wait_for_timeout(PACE_MS)
 
 
 def dryrun_recipe(recipe: dict, headless: bool) -> None:
-    """Setea todos los controles pero NO dispara la generación: cero costo."""
+    """Sets all the controls but does NOT fire the generation: zero cost."""
     with FlowDriver(headless=headless) as drv:
-        print(f"→ abriendo applet {recipe['appletId']}")
+        print(f"→ opening applet {recipe['appletId']}")
         drv.open(
             recipe["appletId"],
             timeout=recipe.get("loadTimeoutMs", 90000),
             project_id=recipe.get("projectId"),
         )
-        print("→ applet montado")
+        print("→ applet mounted")
         apply_controls(drv, recipe)
-        print("\n→ estado final de los controles (sin generar):")
+        print("\n→ final control state (nothing generated):")
         for t in drv._button_texts():
             if t:
                 print(f"   · {t.replace(chr(10), ' | ')}")
-        print("\nOK: la receta es aplicable. No se disparó ninguna generación.")
+        print("\nOK: the recipe applies cleanly. No generation was fired.")
 
 
 def run_recipe(recipe: dict, out_dir: Path, headless: bool) -> dict:
@@ -380,29 +381,29 @@ def run_recipe(recipe: dict, out_dir: Path, headless: bool) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     before = credits_balance()
-    print(f"→ créditos antes: {before}")
+    print(f"→ credits before: {before}")
 
     with FlowDriver(headless=headless) as drv:
-        print(f"→ abriendo applet {applet_id}")
+        print(f"→ opening applet {applet_id}")
         drv.open(applet_id, timeout=recipe.get("loadTimeoutMs", 90000))
-        print("→ applet montado")
+        print("→ applet mounted")
 
         apply_controls(drv, recipe)
 
-        print(f"→ disparando: {recipe['generateButton']!r}")
+        print(f"→ firing: {recipe['generateButton']!r}")
         drv.click(recipe["generateButton"])
 
         result = drv.wait_for_image(timeout=recipe.get("generateTimeoutSec", 300))
-        print(f"→ imagen {result['width']}x{result['height']} mediaId={result['mediaId']}")
+        print(f"→ image {result['width']}x{result['height']} mediaId={result['mediaId']}")
 
         after_gen = credits_balance()
         cost = (before - after_gen) if (before is not None and after_gen is not None) else None
-        print(f"→ créditos después: {after_gen}  (costo de la generación: {cost})")
+        print(f"→ credits after: {after_gen}  (generation cost: {cost})")
 
         stem = recipe.get("name", "flow-output")
         raw = out_dir / f"{stem}.png"
         raw.write_bytes(base64.b64decode(result["base64"]))
-        print(f"→ guardado {raw}")
+        print(f"→ saved {raw}")
 
         drv.dump_network(out_dir / f"{stem}.network.json")
 
@@ -431,7 +432,7 @@ def slug(text: str) -> str:
 
 
 def expand_matrix(recipe: dict) -> list[dict]:
-    """Producto cartesiano de `matrix` -> una lista de recetas concretas."""
+    """Cartesian product of `matrix` -> a list of concrete recipes."""
     import itertools
 
     matrix = recipe.get("matrix") or {}
@@ -444,7 +445,7 @@ def expand_matrix(recipe: dict) -> list[dict]:
         variant = json.loads(json.dumps(recipe))
         variant.pop("matrix", None)
         assigned = dict(zip(labels, combo))
-        # Los valores de la matriz pisan cualquier control fijo del mismo label
+        # Matrix values override any fixed control with the same label
         controls = [
             c
             for c in variant.get("controls", [])
@@ -462,22 +463,22 @@ def expand_matrix(recipe: dict) -> list[dict]:
 def run_batch(
     recipe: dict, out_dir: Path, headless: bool, limit: int | None = None
 ) -> list[dict]:
-    """Ejecuta todas las variantes reutilizando una sola sesión de browser.
+    """Runs every variant reusing a single browser session.
 
-    Reusar la pestaña evita recargar el applet en cada ítem: es más rápido y
-    genera muchísimo menos tráfico que abrir la página N veces.
+    Reusing the tab avoids reloading the applet for each item: it's faster
+    and generates a lot less traffic than opening the page N times.
     """
     variants = expand_matrix(recipe)
     if limit:
         variants = variants[:limit]
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"→ {len(variants)} variantes a generar")
+    print(f"→ {len(variants)} variants to generate")
     for v in variants:
         print(f"   · {v['name']}")
 
     before_all = credits_balance()
-    print(f"→ créditos al inicio: {before_all}\n")
+    print(f"→ credits at the start: {before_all}\n")
 
     results = []
     with FlowDriver(headless=headless) as drv:
@@ -486,13 +487,13 @@ def run_batch(
             timeout=recipe.get("loadTimeoutMs", 90000),
             project_id=recipe.get("projectId"),
         )
-        print("→ applet montado\n")
+        print("→ applet mounted\n")
 
         for i, variant in enumerate(variants, 1):
             name = variant["name"]
             dest = out_dir / f"{name}.png"
             if dest.exists():
-                print(f"[{i}/{len(variants)}] {name}: ya existe, salteo")
+                print(f"[{i}/{len(variants)}] {name}: already exists, skipping")
                 continue
 
             print(f"[{i}/{len(variants)}] {name}")
@@ -516,17 +517,17 @@ def run_batch(
                 results.append(entry)
                 print(f"    ok {res['width']}x{res['height']} -> {dest.name}")
             except Exception as e:
-                print(f"    FALLÓ: {str(e)[:200]}")
+                print(f"    FAILED: {str(e)[:200]}")
                 results.append({"name": name, "error": str(e)[:500]})
 
             if i < len(variants):
-                print(f"    (pausa {PACE_RUN_S}s)")
+                print(f"    (pausing {PACE_RUN_S}s)")
                 time.sleep(PACE_RUN_S)
 
     after_all = credits_balance()
     ok = [r for r in results if "error" not in r]
-    print(f"\n→ {len(ok)}/{len(variants)} generadas")
-    print(f"→ créditos: {before_all} -> {after_all} (costo total: "
+    print(f"\n→ {len(ok)}/{len(variants)} generated")
+    print(f"→ credits: {before_all} -> {after_all} (total cost: "
           f"{(before_all - after_all) if None not in (before_all, after_all) else '?'})")
 
     (out_dir / "batch-manifest.json").write_text(
@@ -546,28 +547,28 @@ def run_batch(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Driver de applets de Flow")
+    ap = argparse.ArgumentParser(description="Flow applet driver")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    i = sub.add_parser("inspect", help="inventariar los controles de un applet")
+    i = sub.add_parser("inspect", help="inventory an applet's controls")
     i.add_argument("applet_id")
     i.add_argument("--headed", action="store_true")
 
     d = sub.add_parser(
-        "dryrun", help="aplicar la receta sin generar (verificación sin costo)"
+        "dryrun", help="apply the recipe without generating (free verification)"
     )
     d.add_argument("recipe")
     d.add_argument("--headed", action="store_true")
 
-    r = sub.add_parser("run", help="ejecutar una receta")
-    r.add_argument("recipe", help="archivo JSON de receta")
+    r = sub.add_parser("run", help="run a recipe")
+    r.add_argument("recipe", help="recipe JSON file")
     r.add_argument("-o", "--out", default=str(OUT_ROOT))
     r.add_argument("--headed", action="store_true")
 
-    b = sub.add_parser("batch", help="ejecutar una receta con matriz de variantes")
+    b = sub.add_parser("batch", help="run a recipe with a variant matrix")
     b.add_argument("recipe")
     b.add_argument("-o", "--out", default=str(OUT_ROOT))
-    b.add_argument("--limit", type=int, help="cortar en las primeras N variantes")
+    b.add_argument("--limit", type=int, help="stop after the first N variants")
     b.add_argument("--headed", action="store_true")
 
     args = ap.parse_args()

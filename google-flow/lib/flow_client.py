@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Cliente HTTP para Google Labs Flow (applets / tools).
+"""HTTP client for Google Labs Flow (applets / tools).
 
-Autenticación en dos saltos:
-    cookie NextAuth  ->  GET labs.google/fx/api/auth/session  ->  access_token
+Two-hop authentication:
+    NextAuth cookie  ->  GET labs.google/fx/api/auth/session  ->  access_token
     access_token     ->  Authorization: Bearer  ->  aisandbox-pa.googleapis.com
 
-La cookie de sesión vive meses; el bearer dura horas. Por eso el bearer se
-re-deriva de la cookie en cada ejecución y se cachea en disco hasta que expira.
+The session cookie lives for months; the bearer lasts hours. That's why the
+bearer is re-derived from the cookie on every run and cached to disk until
+it expires.
 
-Uso:
+Usage:
     python3 tools/flow/flow_client.py whoami
     python3 tools/flow/flow_client.py list
     python3 tools/flow/flow_client.py get <appletId>
-    python3 tools/flow/flow_client.py code <appletId> [-o destino.jsx]
+    python3 tools/flow/flow_client.py code <appletId> [-o dest.jsx]
     python3 tools/flow/flow_client.py sessions
 """
 from __future__ import annotations
@@ -34,11 +35,11 @@ CONFIG_DIR = Path(
 
 
 def _find_cookies() -> Path:
-    """Ubica el archivo de cookies sin asumir una estructura de repo.
+    """Locates the cookies file without assuming a repo structure.
 
-    Orden: variable de entorno, directorio de config del usuario, y el cwd
-    subiendo hacia la raíz — así funciona tanto instalado como dentro de un
-    proyecto que guarde sus cookies en la raíz.
+    Order: environment variable, the user's config directory, and the cwd
+    walking up toward the root — this works both when installed and inside
+    a project that keeps its cookies at the root.
     """
     if os.environ.get("FLOW_COOKIES"):
         return Path(os.environ["FLOW_COOKIES"])
@@ -48,15 +49,15 @@ def _find_cookies() -> Path:
     for c in candidates:
         if c.exists():
             return c
-    return CONFIG_DIR / COOKIE_NAME  # para que el error nombre el lugar canónico
+    return CONFIG_DIR / COOKIE_NAME  # so the error message names the canonical spot
 
 
 COOKIE_PATH = _find_cookies()
 TOKEN_CACHE = Path(
     os.environ.get("FLOW_TOKEN_CACHE", CONFIG_DIR / ".flow-token.json")
 )
-# Sin default: el proyecto es de cada cuenta. Lo resuelve flow_packs.project_id(),
-# que mira el entorno y el pack activo.
+# No default: the project belongs to each account. Resolved by
+# flow_packs.project_id(), which checks the environment and the active pack.
 PROJECT_ID = os.environ.get("FLOW_PROJECT_ID")
 
 LABS = "https://labs.google/fx"
@@ -69,7 +70,7 @@ UA = (
 
 
 class FlowAuthError(RuntimeError):
-    """La cookie de sesión no sirve más: hay que reexportarla del navegador."""
+    """The session cookie no longer works: re-export it from the browser."""
 
 
 # --------------------------------------------------------------------------- auth
@@ -78,9 +79,9 @@ class FlowAuthError(RuntimeError):
 def _cookie_jar() -> dict[str, str]:
     if not COOKIE_PATH.exists():
         raise FlowAuthError(
-            f"no encuentro las cookies en {COOKIE_PATH}. Exportá las de "
-            f"labs.google desde el navegador a esa ruta, o apuntá "
-            f"FLOW_COOKIES al archivo."
+            f"can't find the cookies at {COOKIE_PATH}. Export the labs.google "
+            f"ones from the browser to that path, or point FLOW_COOKIES at "
+            f"the file."
         )
     raw = json.loads(COOKIE_PATH.read_text())
     jar = {}
@@ -88,19 +89,19 @@ def _cookie_jar() -> dict[str, str]:
     for c in raw:
         exp = c.get("expires") or c.get("expirationDate") or 0
         if exp and 0 < exp < now:
-            continue  # vencida
+            continue  # expired
         if "labs.google" in c.get("domain", ""):
             jar[c["name"]] = c["value"]
     if "__Secure-next-auth.session-token" not in jar:
         raise FlowAuthError(
-            "falta la cookie __Secure-next-auth.session-token (o está vencida). "
-            "Reexportá las cookies de labs.google desde el navegador."
+            "missing the __Secure-next-auth.session-token cookie (or it's "
+            "expired). Re-export the labs.google cookies from the browser."
         )
     return jar
 
 
 def load_cookies_for_playwright() -> list[dict]:
-    """Las mismas cookies, en el formato que espera `context.add_cookies()`."""
+    """The same cookies, in the format `context.add_cookies()` expects."""
     raw = json.loads(COOKIE_PATH.read_text())
     out = []
     for c in raw:
@@ -132,11 +133,11 @@ def _fetch_access_token() -> tuple[str, float]:
     token = data.get("access_token")
     if not token:
         raise FlowAuthError(
-            "la sesión respondió sin access_token — la cookie ya no es válida. "
-            "Reexportá las cookies de labs.google."
+            "the session responded without an access_token — the cookie is "
+            "no longer valid. Re-export the labs.google cookies."
         )
-    # `expires` es el vencimiento de la sesión NextAuth; el bearer suele durar menos.
-    # Cacheamos con margen conservador.
+    # `expires` is the NextAuth session's expiration; the bearer usually lasts
+    # less. We cache with a conservative margin.
     expires_at = time.time() + 45 * 60
     return token, expires_at
 
@@ -209,7 +210,7 @@ def get_applet(applet_id: str, version_id: str | None = None) -> dict:
             (a for a in list_applets() if a["appletId"] == applet_id), None
         )
         if match is None:
-            raise SystemExit(f"no existe el applet {applet_id}")
+            raise SystemExit(f"applet {applet_id} does not exist")
         version_id = match["currentVersionId"]
     return sandbox("GET", f"flowAppletAgent/applets/{applet_id}/versions/{version_id}")
 
@@ -228,26 +229,26 @@ def creation_sessions(project_id: str | None = None) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Cliente de Google Labs Flow")
+    ap = argparse.ArgumentParser(description="Google Labs Flow client")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("whoami", help="verificar sesión")
-    sub.add_parser("list", help="listar applets/tools")
-    sub.add_parser("sessions", help="sesiones del agente creador")
+    sub.add_parser("whoami", help="verify session")
+    sub.add_parser("list", help="list applets/tools")
+    sub.add_parser("sessions", help="creation agent sessions")
 
-    g = sub.add_parser("get", help="definición completa de un applet")
+    g = sub.add_parser("get", help="full definition of an applet")
     g.add_argument("applet_id")
 
-    c = sub.add_parser("code", help="extraer el código fuente del applet")
+    c = sub.add_parser("code", help="extract the applet's source code")
     c.add_argument("applet_id")
-    c.add_argument("-o", "--out", help="archivo destino")
+    c.add_argument("-o", "--out", help="destination file")
 
-    pl = sub.add_parser("pull", help="bajar todos los archivos fuente de un applet")
+    pl = sub.add_parser("pull", help="download all of an applet's source files")
     pl.add_argument("applet_id")
-    pl.add_argument("-d", "--dir", help="directorio destino")
+    pl.add_argument("-d", "--dir", help="destination directory")
 
     ss = sub.add_parser(
-        "session", help="conversación con el agente creador que produjo el applet"
+        "session", help="conversation with the creation agent that produced the applet"
     )
     ss.add_argument("applet_id")
 
@@ -256,9 +257,9 @@ def main() -> None:
     if args.cmd == "whoami":
         info = session_info()
         user = info.get("user", {})
-        print(f"usuario : {user.get('name')} <{user.get('email')}>")
-        print(f"sesión  : expira {info.get('expires')}")
-        print(f"bearer  : {'OK' if info.get('access_token') else 'AUSENTE'}")
+        print(f"user    : {user.get('name')} <{user.get('email')}>")
+        print(f"session : expires {info.get('expires')}")
+        print(f"bearer  : {'OK' if info.get('access_token') else 'MISSING'}")
 
     elif args.cmd == "list":
         applets = list_applets()
@@ -280,7 +281,7 @@ def main() -> None:
         code = _extract_code(data)
         if args.out:
             Path(args.out).write_text(code)
-            print(f"escrito en {args.out} ({len(code)} bytes)")
+            print(f"written to {args.out} ({len(code)} bytes)")
         else:
             print(code)
 
@@ -300,12 +301,12 @@ def main() -> None:
             k: v for k, v in data.get("appletVersion", {}).items() if k != "codeBlobref"
         }
         (dest / "_meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
-        print(f"\n{len(files)} archivos en {dest}")
+        print(f"\n{len(files)} files in {dest}")
 
     elif args.cmd == "session":
         data = get_applet(args.applet_id)
         events = (data.get("appletSession") or {}).get("events") or []
-        print(f"{len(events)} eventos\n")
+        print(f"{len(events)} events\n")
         for i, ev in enumerate(events):
             author = ev.get("author", "?")
             text = ev.get("text", "")
@@ -318,7 +319,7 @@ def main() -> None:
 
 
 def _extract_code(data: dict) -> str:
-    """Busca el campo de código dentro de la definición del applet."""
+    """Looks for the code field inside the applet definition."""
     hits: list[tuple[str, str]] = []
 
     def walk(node, path=""):
@@ -336,7 +337,7 @@ def _extract_code(data: dict) -> str:
         return json.dumps(data, indent=2, ensure_ascii=False)
     hits.sort(key=lambda t: len(t[1]), reverse=True)
     path, code = hits[0]
-    print(f"// campo: {path}", file=sys.stderr)
+    print(f"// field: {path}", file=sys.stderr)
     return code
 
 
@@ -344,5 +345,5 @@ if __name__ == "__main__":
     try:
         main()
     except FlowAuthError as e:
-        print(f"ERROR DE AUTENTICACIÓN: {e}", file=sys.stderr)
+        print(f"AUTHENTICATION ERROR: {e}", file=sys.stderr)
         sys.exit(2)

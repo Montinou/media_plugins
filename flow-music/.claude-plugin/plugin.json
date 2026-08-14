@@ -1,7 +1,7 @@
 {
   "name": "flow-music",
   "version": "0.1.0",
-  "description": "Puente a Google Flow Music: cuenta y créditos, catálogo de canciones, y descarga de stems (bass incluido) por la API. Incluye MCP server, precondición de autenticación y guía de comportamiento.",
+  "description": "Bridge to Google Flow Music: account and credits, song catalog, and stem download (bass included) through the API. Includes MCP server, authentication precondition, and behavior guide.",
   "author": {
     "name": "Montinou"
   },

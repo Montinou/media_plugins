@@ -1,53 +1,57 @@
 # flowmusic
 
-Puente a **Google Flow Music** (`flowmusic.app`, que por debajo es Riffusion):
-catálogo, créditos y descarga de stems —**incluido el de bass**— por la API.
+Bridge to **Google Flow Music** (`flowmusic.app`, which under the hood is
+Riffusion): catalog, credits, and stem download —**bass included**— through
+the API.
 
-## Instalación
+## Installation
 
 ```
 /plugin marketplace add Montinou/media_plugins
 /plugin install flow-music@media-plugins
 ```
 
-## Precondición
+## Precondition
 
-Necesita una sesión válida en `www.flowmusic.app.cookies.json`, en la raíz del
-repo (o `FLOWMUSIC_COOKIES` apuntando al archivo). El hook de `SessionStart`
-avisa si venció y no puede renovarse sola; `/flowmusic:auth` guía la renovación.
+Needs a valid session in `www.flowmusic.app.cookies.json`, at the root of the
+repo (or `FLOWMUSIC_COOKIES` pointing to the file). The `SessionStart` hook
+warns if it expired and can't refresh itself; `/flowmusic:auth` guides the
+renewal.
 
-El archivo es una sesión completa: `chmod 600` y cubierto por `*.cookies.json`
-en `.gitignore`.
+The file is a full session: `chmod 600` and covered by `*.cookies.json`
+in `.gitignore`.
 
-## Qué trae
+## What it includes
 
-**MCP `flowmusic`** (stdio, sin dependencias de pip):
+**MCP `flowmusic`** (stdio, no pip dependencies):
 
-| Tool | Red | Qué hace |
+| Tool | Network | What it does |
 |---|---|---|
-| `flowmusic_auth_status` | no | estado de sesión; primera parada siempre |
-| `flowmusic_account` | sí | usuario y **saldo real** de créditos |
-| `flowmusic_list_songs` | sí | canciones del usuario |
-| `flowmusic_list_stems` | sí | temas que ya tienen stems |
-| `flowmusic_stem_urls` | sí | URLs sin descargar |
-| `flowmusic_download_stems` | sí | baja los 4 stems a disco |
-| `flowmusic_download_song` | sí | baja la mezcla (WAV si existe) |
+| `flowmusic_auth_status` | no | session status; always the first stop |
+| `flowmusic_account` | yes | user and **real balance** of credits |
+| `flowmusic_list_songs` | yes | user's songs |
+| `flowmusic_list_stems` | yes | tracks that already have stems |
+| `flowmusic_stem_urls` | yes | URLs without downloading |
+| `flowmusic_download_stems` | yes | downloads the 4 stems to disk |
+| `flowmusic_download_song` | yes | downloads the mix (WAV if it exists) |
 
-**Comandos:** `/flowmusic:auth`, `/flowmusic:stems`
-**Skill:** `flowmusic` — API, restricción del bass, cuidados y flujos de navegador.
+**Commands:** `/flowmusic:auth`, `/flowmusic:stems`
+**Skill:** `flowmusic` — API, bass restriction, behavior rules, and browser
+flows.
 
-## Lo que hay que saber
+## What you need to know
 
-- **El bass.** La UI y `/__api/download/audio/{id}` lo niegan (403), pero el
-  `audio_url` del clip apunta a un bucket público que responde 200 — la misma
-  URL que abre "Open Stem" en los spaces. `flowmusic_download_stems` ya usa esa
-  vía.
-- **Los créditos del sidebar no son el saldo**: son el cupo diario gratis.
-- **Separar stems no lo hace la API.** Hay que correr *Split stems* en la web.
-- **`wav_url` miente en los stems**: viene poblado pero da 404. Solo sirve en
-  clips de canción.
+- **The bass.** The UI and `/__api/download/audio/{id}` deny it (403), but the
+  clip's `audio_url` points to a public bucket that responds 200 — the same
+  URL that "Open Stem" opens in spaces. `flowmusic_download_stems` already
+  uses that route.
+- **The sidebar credits are not the balance**: they're the free daily quota.
+- **The API doesn't separate stems.** You have to run *Split stems* on the
+  web.
+- **`wav_url` lies on stems**: it comes populated but returns 404. It only
+  works on song clips.
 
-## Ritmo
+## Pacing
 
-El cliente impone 2,5 s entre requests (`FLOWMUSIC_MIN_INTERVAL`). No lo bajes:
-nada de ráfagas, reintentos rápidos ni descargas en paralelo.
+The client enforces 2.5 s between requests (`FLOWMUSIC_MIN_INTERVAL`). Do not
+lower it: no bursts, no fast retries, no parallel downloads.

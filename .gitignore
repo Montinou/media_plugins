@@ -1,4 +1,4 @@
-# Credenciales de sesión — NUNCA commitear
+# Session credentials — NEVER commit these
 *.cookies.json
 *cookies*.json
 .flow-token.json
@@ -7,7 +7,7 @@
 .env
 .env.*
 
-# Salidas de generación
+# Generation outputs
 flow-out/
 flow-applets/
 work/

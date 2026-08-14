@@ -1,51 +1,52 @@
 ---
-description: Verificar la sesión de Flow Music y guiar la renovación de cookies si hace falta
+description: Verify the Flow Music session and guide cookie renewal if needed
 ---
 
 # /flowmusic:auth
 
-Chequea la precondición de autenticación de Flow Music y, si no se cumple, guía
-al usuario para renovarla. No genera nada ni gasta créditos.
+Checks the Flow Music authentication precondition and, if it isn't met,
+guides the user through renewing it. Doesn't generate anything or spend
+credits.
 
-## Pasos
+## Steps
 
-1. Llamá `flowmusic_auth_status`. Es local: no toca la red.
+1. Call `flowmusic_auth_status`. It's local: doesn't touch the network.
 
-2. Interpretá:
+2. Interpret the result:
 
-   - **`valid: true`** — informá a quién pertenece la sesión y cuánto le queda
-     (en minutos, no en segundos crudos). Terminá ahí.
-   - **`valid: false` con `can_refresh: true`** — decí que el token venció pero
-     se renueva solo, y confirmalo llamando `flowmusic_account`. Si eso funciona,
-     está resuelto.
-   - **`valid: false` con `can_refresh: false`, o error de autenticación** — pasá
-     al punto 3.
+   - **`valid: true`** — report who the session belongs to and how much time
+     is left (in minutes, not raw seconds). Stop there.
+   - **`valid: false` with `can_refresh: true`** — say the token expired but
+     it renews itself, and confirm by calling `flowmusic_account`. If that
+     works, it's resolved.
+   - **`valid: false` with `can_refresh: false`, or an authentication error**
+     — move on to step 3.
 
-3. Pedí la renovación con instrucciones concretas:
+3. Ask for the renewal with concrete instructions:
 
-   > Necesito que reexportes las cookies de Flow Music:
-   > 1. Abrí `https://www.flowmusic.app/` en Chrome y confirmá que estás logueado.
-   > 2. Exportá las cookies del dominio a JSON (extensión tipo *Cookie-Editor* →
+   > I need you to re-export the Flow Music cookies:
+   > 1. Open `https://www.flowmusic.app/` in Chrome and confirm you're logged in.
+   > 2. Export the domain's cookies to JSON (an extension like *Cookie-Editor* →
    >    Export → JSON).
-   > 3. Guardá el archivo como `www.flowmusic.app.cookies.json` en la raíz del repo.
+   > 3. Save the file as `www.flowmusic.app.cookies.json` at the repo root.
    >
-   > Avisame cuando esté y sigo.
+   > Let me know when it's done and I'll continue.
 
-4. Cuando el usuario confirme, volvé a `flowmusic_auth_status` y luego
-   `flowmusic_account` para verificar de punta a punta.
+4. Once the user confirms, call `flowmusic_auth_status` again and then
+   `flowmusic_account` to verify end to end.
 
-5. Higiene, una sola vez tras cada renovación:
+5. Hygiene, once after each renewal:
 
    ```bash
    chmod 600 www.flowmusic.app.cookies.json
    git check-ignore -v www.flowmusic.app.cookies.json
    ```
 
-   Si `git check-ignore` no lo reporta como ignorado, **avisá fuerte**: hay una
-   sesión completa a punto de entrar al repo.
+   If `git check-ignore` doesn't report it as ignored, **raise a strong
+   warning**: a full session is about to enter the repo.
 
-## Qué no hacer
+## What not to do
 
-- No reintentes las tools mientras la sesión esté vencida.
-- No le pidas al usuario que pegue el token ni el contenido del archivo en el chat.
-- No intentes loguearte vos ni completar formularios de login.
+- Don't retry the tools while the session is expired.
+- Don't ask the user to paste the token or the file's contents into the chat.
+- Don't try to log in yourself or fill out login forms.

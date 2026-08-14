@@ -1,7 +1,7 @@
 {
   "name": "google-flow",
   "version": "0.2.0",
-  "description": "Google Labs Flow desde Claude Code: catálogo de herramientas, generación en batch conduciendo los applets, y upscale local. Genérico: los ids de cada cuenta viven en packs.",
+  "description": "Google Labs Flow from Claude Code: a tool catalog, batch generation by driving the applets, and local upscaling. Generic: each account's ids live in packs.",
   "author": {
     "name": "Montinou"
   },

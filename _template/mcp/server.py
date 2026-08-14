@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Servidor MCP de ejemplo — core reusable.
+"""Example MCP server — reusable core.
 
-JSON-RPC 2.0 sobre stdio con la stdlib nada más. Corre tal cual:
+JSON-RPC 2.0 over stdio using only the stdlib. Runs as-is:
 
     printf '%s\\n' \\
       '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}' \\
       '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \\
       | python3 _template/mcp/server.py
 
-Para hacerlo tuyo: cambiá SERVER_NAME, importá tu lib y reemplazá las tools de
-ejemplo. La capa JSON-RPC de abajo no hace falta tocarla.
+To make it yours: change SERVER_NAME, import your lib, and replace the
+example tools. You don't need to touch the JSON-RPC layer below.
 
-Todo lo que sea específico de un proyecto (ids, presets, prompts) NO va acá:
-va en `packs/<proyecto>/` y se carga por nombre. Ver `packs/README.md`.
+Anything project-specific (ids, presets, prompts) does NOT go here: it
+goes in `packs/<project>/` and gets loaded by name. See `packs/README.md`.
 """
 from __future__ import annotations
 
@@ -34,11 +34,11 @@ HANDLERS: dict[str, Callable[[dict], Any]] = {}
 
 
 def tool(name: str, description: str, schema: dict, **annotations):
-    """Registra una tool.
+    """Registers a tool.
 
-    La `description` la lee un modelo para decidir cuándo usarla: escribí para
-    qué sirve y CUÁNDO conviene, no sólo qué hace. Marcá `readOnlyHint=True` en
-    todo lo que no escriba ni gaste.
+    The `description` is read by a model to decide when to use it: write
+    what it's for and WHEN it's appropriate, not just what it does. Mark
+    `readOnlyHint=True` on anything that doesn't write or spend.
     """
 
     def deco(fn):
@@ -65,12 +65,12 @@ def tool(name: str, description: str, schema: dict, **annotations):
 
 @tool(
     "example_auth_status",
-    "Estado de la sesión: es puramente local, no toca la red ni gasta nada. "
-    "Usala SIEMPRE antes de la primera operación de una sesión de trabajo, y "
-    "cada vez que otra tool falle por autenticación, para distinguir una cookie "
-    "vencida de un problema real.",
-    {"properties": {"cookies_path": {"type": "string", "description": "Ruta al JSON de cookies. Opcional."}}},
-    title="Estado de sesión",
+    "Session status: purely local, doesn't touch the network or spend "
+    "anything. Use it ALWAYS before the first operation of a work session, "
+    "and every time another tool fails on authentication, to tell an "
+    "expired cookie apart from a real problem.",
+    {"properties": {"cookies_path": {"type": "string", "description": "Path to the cookies JSON. Optional."}}},
+    title="Session status",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -81,14 +81,14 @@ def _auth_status(args: dict) -> dict:
         return {
             "valid": False,
             "problem": str(e),
-            "action": "pedirle al usuario que reexporte las cookies",
+            "action": "ask the user to re-export the cookies",
         }
 
 
 @tool(
     "example_ping",
-    "Ejemplo de tool que sí sale a la red. Reemplazala por la primera operación "
-    "real de tu servicio.",
+    "Example tool that does hit the network. Replace it with your "
+    "service's first real operation.",
     {"properties": {"cookies_path": {"type": "string"}}},
     title="Ping",
     readOnlyHint=True,
@@ -98,7 +98,7 @@ def _ping(args: dict) -> dict:
 
 
 # -------------------------------------------------------------------- JSON-RPC
-# De acá para abajo es infraestructura: sirve igual para cualquier plugin.
+# Everything below this point is infrastructure: works the same for any plugin.
 
 
 def _result(rid, payload):
@@ -117,8 +117,8 @@ def handle(msg: dict) -> dict | None:
     rid = msg.get("id")
 
     if method == "initialize":
-        # Devolvemos la versión que pide el cliente: los hosts van de 2024-11-05
-        # a 2025-11-25 y hardcodear una sola rompe con el resto.
+        # We return whatever version the client asks for: hosts range from
+        # 2024-11-05 to 2025-11-25, and hardcoding one breaks with the rest.
         client_proto = (msg.get("params") or {}).get("protocolVersion")
         return _result(
             rid,
@@ -130,7 +130,7 @@ def handle(msg: dict) -> dict | None:
         )
 
     if method and method.startswith("notifications/"):
-        return None  # las notificaciones no llevan respuesta
+        return None  # notifications don't get a response
 
     if method == "ping":
         return _result(rid, {})
@@ -145,7 +145,7 @@ def handle(msg: dict) -> dict | None:
         if fn is None:
             return _text(
                 rid,
-                f"No existe la tool {name!r}. Disponibles: {', '.join(sorted(HANDLERS))}",
+                f"Tool {name!r} doesn't exist. Available: {', '.join(sorted(HANDLERS))}",
                 is_error=True,
             )
         try:
@@ -154,24 +154,24 @@ def handle(msg: dict) -> dict | None:
                 json.dumps(fn(params.get("arguments") or {}), indent=2, ensure_ascii=False),
             )
         except ServiceAuthError as e:
-            # Un error de auth es del usuario, no del modelo: decilo con la
-            # acción concreta y prohibí el reintento.
+            # An auth error belongs to the user, not the model: state the
+            # concrete action and forbid retrying.
             return _text(
                 rid,
-                f"AUTENTICACIÓN: {e}\n\n"
-                "No reintentes ni pruebes otras tools: pedile al usuario que "
-                "reexporte las cookies.",
+                f"AUTHENTICATION: {e}\n\n"
+                "Do not retry or try other tools: ask the user to "
+                "re-export the cookies.",
                 is_error=True,
             )
         except ServiceError as e:
-            return _text(rid, f"Error del servicio: {e}", is_error=True)
+            return _text(rid, f"Service error: {e}", is_error=True)
         except Exception as e:  # noqa: BLE001
             return _text(rid, f"{type(e).__name__}: {e}", is_error=True)
 
     return {
         "jsonrpc": "2.0",
         "id": rid,
-        "error": {"code": -32601, "message": f"Método no soportado: {method}"},
+        "error": {"code": -32601, "message": f"Unsupported method: {method}"},
     }
 
 

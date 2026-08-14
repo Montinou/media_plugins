@@ -1,66 +1,67 @@
 # Packs
 
-El plugin `google-flow` es genérico: sus tools funcionan con cualquier cuenta y
-cualquier applet. Un **pack** es la parte que no puede ser genérica.
+The `google-flow` plugin is generic: its tools work with any account and any
+applet. A **pack** is the part that can't be generic.
 
-## Qué es propio de cada cuenta
+## What's specific to each account
 
-| | Por qué no puede venir en el plugin |
+| | Why it can't ship in the plugin |
 |---|---|
-| `projectId` | Va en la URL de todo applet, y es de cada cuenta |
-| `appletId` | Identifica *tus* herramientas, no las de otro |
-| Vocabularios | Los valores de cada dropdown los definió quien creó el applet |
-| Recetas | Combinan lo anterior |
+| `projectId` | Goes in every applet's URL, and belongs to each account |
+| `appletId` | Identifies *your* tools, not someone else's |
+| Vocabularies | Each dropdown's values were defined by whoever built the applet |
+| Recipes | Combine the above |
 
-Todo lo demás —autenticación, conducción del browser, batch, upscale, medición
-de créditos— es igual para todos y vive en el plugin.
+Everything else — authentication, driving the browser, batch, upscale,
+credit measurement — is the same for everyone and lives in the plugin.
 
-## Generar el tuyo
-
-```
-flow_scaffold_pack   dest: "./mi-pack",  name: "mi-pack"
-```
-
-Descubre el proyecto abriendo Flow, lista tus herramientas, abre cada una para
-leer sus controles reales, extrae los valores válidos de `constants.ts` y deja:
+## Generating your own
 
 ```
-mi-pack/
-├── pack.json        projectId, applets, controles y vocabularios
-├── applets.md       la misma info en prosa, para leer
-└── recipes/*.json   una receta inicial por herramienta
+flow_scaffold_pack   dest: "./my-pack",  name: "my-pack"
 ```
 
-Tarda unos minutos: abre un browser por applet, con pausas. Es una operación de
-setup que se hace una vez.
+Discovers the project by opening Flow, lists your tools, opens each one to
+read its real controls, extracts the valid values from `constants.ts`, and
+leaves you with:
 
-Si ya sabés tu `projectId` (está en la URL:
-`labs.google/fx/tools/flow/project/<projectId>/…`), pasalo como `project_id` y
-se saltea el descubrimiento.
+```
+my-pack/
+├── pack.json        projectId, applets, controls, and vocabularies
+├── applets.md       the same info in prose, for reading
+└── recipes/*.json   one starter recipe per tool
+```
 
-## Activarlo
+Takes a few minutes: it opens a browser per applet, with pauses. It's a
+setup operation you do once.
+
+If you already know your `projectId` (it's in the URL:
+`labs.google/fx/tools/flow/project/<projectId>/…`), pass it as `project_id`
+and discovery is skipped.
+
+## Activating it
 
 ```bash
-export FLOW_PACK=/ruta/a/mi-pack        # cualquier directorio
-export FLOW_PACK_NAME=_template         # o uno de packs/ del plugin
+export FLOW_PACK=/path/to/my-pack        # any directory
+export FLOW_PACK_NAME=_template          # or one of the plugin's packs/
 ```
 
-Con el pack activo, `flow_pack_info` lo describe y las tools de generación
-aceptan `recipe_name` además de la receta completa.
+With the pack active, `flow_pack_info` describes it and the generation
+tools accept `recipe_name` in addition to a full recipe.
 
-## Escribirlo a mano
+## Writing it by hand
 
-`pack.json` es un archivo común; el scaffolder es una comodidad, no un
-requisito. Lo mínimo que necesita:
+`pack.json` is a plain file; the scaffolder is a convenience, not a
+requirement. The minimum it needs:
 
 ```json
 {
-  "name": "mi-pack",
+  "name": "my-pack",
   "projectId": "00000000-0000-0000-0000-000000000000",
   "applets": {
-    "mi-herramienta": {
+    "my-tool": {
       "appletId": "11111111-1111-1111-1111-111111111111",
-      "displayName": "Mi Herramienta",
+      "displayName": "My Tool",
       "generateButton": "GENERAR",
       "controls": [
         { "type": "dropdown", "label": "Estilo", "current": "Realista" }
@@ -71,33 +72,34 @@ requisito. Lo mínimo que necesita:
 }
 ```
 
-Ver `_template/` para un esqueleto completo con comentarios.
+See `_template/` for a full skeleton with comments.
 
-## Lo que el scaffolder acierta y lo que no
+## What the scaffolder gets right, and what it doesn't
 
-Los controles y el texto del botón salen de **inspeccionar la UI montada**, no
-de parsear el código: el JSX varía demasiado entre applets para deducirlos con
-confianza. Aun así conviene revisar lo generado.
+The controls and the button text come from **inspecting the mounted UI**,
+not from parsing the code: the JSX varies too much between applets to
+deduce them reliably. Still, it's worth reviewing what it generates.
 
-Dos cosas que vas a querer mirar:
+Two things you'll want to check:
 
-**Acciones deshabilitadas.** Si `disabledActions` incluye el botón de generar,
-ese applet necesita un insumo previo —típicamente una imagen subida— y hoy no
-es automatizable, porque falta implementar el upload de referencias.
+**Disabled actions.** If `disabledActions` includes the generate button,
+that applet needs a prior input — typically an uploaded image — and isn't
+automatable today, because reference upload isn't implemented yet.
 
-**Vocabularios vacíos.** Si un applet no declara sus opciones en `constants.ts`
-sino inline en el JSX, `vocabulary` queda corto. El campo `current` de cada
-dropdown igual trae el valor seleccionado, que sirve como punto de partida.
+**Empty vocabularies.** If an applet doesn't declare its options in
+`constants.ts` but inline in the JSX, `vocabulary` comes up short. Each
+dropdown's `current` field still carries the selected value, which works as
+a starting point.
 
-## Packs incluidos
+## Included packs
 
-Sólo [`_template`](./_template), con placeholders.
+Only [`_template`](./_template), with placeholders.
 
-**Este repo es público y no incluye packs reales, a propósito.** Un pack lleva
-los `appletId` y el `projectId` de una cuenta concreta: publicarlos revela qué
-herramientas privadas tiene esa persona. El tuyo va en
-`~/.config/google-flow/packs/<nombre>` y se activa con `FLOW_PACK`, que acepta
-cualquier ruta.
+**This repo is public and deliberately includes no real packs.** A pack
+carries the `appletId` and `projectId` of a specific account: publishing
+them reveals what private tools that person has. Yours goes in
+`~/.config/google-flow/packs/<name>` and activates with `FLOW_PACK`, which
+accepts any path.
 
-Es la misma razón por la que ningún plugin público de referencia —`vercel`,
-`supabase`— trae ids de la cuenta de su autor.
+It's the same reason no public reference plugin — `vercel`, `supabase` —
+ships its author's account ids.

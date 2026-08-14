@@ -1,7 +1,7 @@
 {
   "name": "suno",
   "version": "0.1.0",
-  "description": "Operar Suno con criterio: Studio 2.0 (DAW multipista y export de stems), generación fuera del Studio, y verificación local de lo descargado. MCP sin red por diseño; la operación va por navegador.",
+  "description": "Operate Suno with judgment: Studio 2.0 (multitrack DAW and stem export), generation outside the Studio, and local verification of downloads. MCP with no network access by design; operation goes through the browser.",
   "author": {
     "name": "Montinou"
   },

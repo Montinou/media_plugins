@@ -1,60 +1,61 @@
 ---
 name: example
-description: Use when working with <servicio> — describí acá las tareas concretas que dispara esta skill (bajar assets, generar, revisar cuenta) y los términos que el usuario va a nombrar. Esta línea decide si la skill se carga, así que escribila pensando en qué va a decir el usuario, no en cómo se llama el plugin.
+description: Use when working with <service> — describe here the concrete tasks that trigger this skill (downloading assets, generating, checking the account) and the terms the user will actually say. This line decides whether the skill loads, so write it thinking about what the user will say, not what the plugin is called.
 ---
 
-# <Servicio>
+# <Service>
 
-Una o dos líneas: qué es el servicio y qué resuelve este plugin.
+One or two lines: what the service is and what this plugin solves.
 
-Aclará desde el principio cómo se reparte el trabajo, porque casi nunca es todo
-por un solo lado:
+Clarify from the start how the work is split, because it's almost never all
+on one side:
 
-- **MCP (`<servicio>_*`)** — qué se hace por API.
-- **Navegador** — qué sólo se puede hacer en la UI.
+- **MCP (`<service>_*`)** — what's done via the API.
+- **Browser** — what can only be done in the UI.
 
-## Precondición: autenticación
+## Precondition: authentication
 
-**Antes de la primera operación de cada sesión, llamá `<servicio>_auth_status`.**
-Es local, gratis y no toca la red.
+**Before the first operation of each session, call `<service>_auth_status`.**
+It's local, free, and doesn't touch the network.
 
-| Resultado | Qué hacer |
+| Result | What to do |
 |---|---|
-| `valid: true` | seguir |
-| `valid: false` (renovable) | seguir; se renueva sola |
-| `valid: false` (no renovable) | **parar y pedir renovación al usuario** |
-| tool falla con `AUTENTICACIÓN:` | ídem |
+| `valid: true` | continue |
+| `valid: false` (renewable) | continue; it renews itself |
+| `valid: false` (not renewable) | **stop and ask the user to renew** |
+| tool fails with `AUTHENTICATION:` | same |
 
-Pedí la renovación con instrucciones concretas: qué exportar, de dónde, con qué
-nombre y adónde. **Nunca** reintentes una tool que falló por autenticación ni
-pruebes otras "a ver si andan": un 401 repetido es lo que hace que marquen una
-cuenta.
+Ask for renewal with concrete instructions: what to export, from where,
+with what name, and where to put it. **Never** retry a tool that failed on
+authentication, and don't try others "to see if they work": a repeated 401
+is what gets an account flagged.
 
-## Cuidados de comportamiento
+## Behavior rules
 
-Adaptá esta lista, pero no la borres — es el motivo de que el plugin sea seguro:
+Adapt this list, but don't delete it — it's the reason the plugin is safe:
 
-1. **Ritmo pausado.** Nada de ráfagas, reintentos rápidos ni paralelismo.
-2. **No reproduzcas audio.** Verificá midiendo (`ffprobe`, `astats`), no escuchando.
-3. **No evadas un bloqueo.** Un 403 o un CAPTCHA es una decisión del proveedor.
-4. **Confirmá antes de gastar** créditos o de cualquier acción irreversible.
-5. **Verificá lo que entregás** en vez de confiar en el nombre del archivo.
-6. **No borres nada del usuario.**
+1. **Slow, paced requests.** No bursts, no fast retries, no parallelism.
+2. **Never play audio.** Verify by measuring (`ffprobe`, `astats`), not by
+   listening.
+3. **Don't evade a block.** A 403 or a CAPTCHA is the provider's decision.
+4. **Confirm before spending** credits or any irreversible action.
+5. **Verify what you deliver** instead of trusting the file name.
+6. **Never delete anything belonging to the user.**
 
-## Flujos
+## Flows
 
-Paso a paso de las operaciones típicas. Incluí lo que sólo se aprende
-operando: cuánto tarda cada cosa, qué estados intermedios muestra la UI, qué
-falla y por qué.
+Step-by-step for the typical operations. Include what can only be learned
+by doing: how long each thing takes, what intermediate states the UI shows,
+what fails and why.
 
-## Mapa de la API
+## API map
 
-Base, autenticación, y la tabla de endpoints con lo que devuelve cada uno.
-Anotá las trampas: campos que existen pero mienten, endpoints que niegan algo a
-propósito, límites reales.
+Base URL, authentication, and the endpoint table with what each one
+returns. Note the traps: fields that exist but lie, endpoints that deny
+something on purpose, real limits.
 
 ## Packs
 
-Si el plugin admite atajos específicos de un proyecto, explicá cómo se activan
-(`<SERVICIO>_PACK`) y qué aportan. **El core funciona sin ningún pack**: si una
-tool sólo anda con pack, está mal diseñada.
+If the plugin supports project-specific shortcuts, explain how they're
+activated (`<SERVICE>_PACK`) and what they add. **The core works without
+any pack**: if a tool only works with a pack, it's badly designed.

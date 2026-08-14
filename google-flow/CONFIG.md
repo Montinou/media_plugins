@@ -1,91 +1,92 @@
-# Configuración
+# Configuration
 
-Todo se resuelve por variables de entorno con prefijo `FLOW_`. Ninguna es
-obligatoria salvo las credenciales; el resto tiene defaults razonables.
+Everything is resolved through environment variables prefixed `FLOW_`. None
+are mandatory except the credentials; the rest have reasonable defaults.
 
-## Credenciales
+## Credentials
 
-| Variable | Default | Para qué |
+| Variable | Default | What for |
 |---|---|---|
-| `FLOW_COOKIES` | busca `labs.google.cookies.json` en `FLOW_CONFIG_DIR` y subiendo desde el cwd | Archivo de cookies de labs.google |
-| `FLOW_CONFIG_DIR` | `~/.config/google-flow` | Dónde viven las credenciales |
-| `FLOW_TOKEN_CACHE` | `$FLOW_CONFIG_DIR/.flow-token.json` | Cache del bearer derivado de la cookie |
+| `FLOW_COOKIES` | looks for `labs.google.cookies.json` in `FLOW_CONFIG_DIR` and upward from the cwd | labs.google cookies file |
+| `FLOW_CONFIG_DIR` | `~/.config/google-flow` | Where credentials live |
+| `FLOW_TOKEN_CACHE` | `$FLOW_CONFIG_DIR/.flow-token.json` | Cache for the bearer derived from the cookie |
 
-La cookie de sesión dura meses; el bearer, horas. El bearer se re-deriva solo,
-así que sólo hay que reexportar cookies cuando la sesión caduca del todo.
+The session cookie lasts months; the bearer, hours. The bearer re-derives
+itself, so you only need to re-export cookies once the session fully expires.
 
-## Qué proyecto y qué herramientas
+## Which project and which tools
 
-| Variable | Default | Para qué |
+| Variable | Default | What for |
 |---|---|---|
-| `FLOW_PROJECT_ID` | el del pack activo | Proyecto de Flow |
-| `FLOW_PACK` | ninguno | Ruta a un directorio con `pack.json` |
-| `FLOW_PACK_NAME` | ninguno | Nombre de un pack dentro de `packs/` del plugin |
+| `FLOW_PROJECT_ID` | the active pack's | Flow project |
+| `FLOW_PACK` | none | Path to a directory with `pack.json` |
+| `FLOW_PACK_NAME` | none | Name of a pack inside the plugin's `packs/` |
 
-Sin ninguna de las tres, las tools que abren un applet fallan con un mensaje que
-explica cómo obtener el `projectId`. Es deliberado: el plugin no trae el
-proyecto de nadie hardcodeado.
+Without any of the three, tools that open an applet fail with a message
+explaining how to get the `projectId`. That's deliberate: the plugin doesn't
+ship anyone's project hardcoded.
 
-`FLOW_PACK` gana sobre `FLOW_PACK_NAME`, y `FLOW_PROJECT_ID` gana sobre ambos.
+`FLOW_PACK` wins over `FLOW_PACK_NAME`, and `FLOW_PROJECT_ID` wins over both.
 
-## Salidas
+## Outputs
 
-| Variable | Default | Para qué |
+| Variable | Default | What for |
 |---|---|---|
-| `FLOW_OUT` | `./flow-out` | PNGs generados y manifests |
-| `FLOW_APPLETS` | `./flow-applets` | Código fuente de applets descargado |
+| `FLOW_OUT` | `./flow-out` | Generated PNGs and manifests |
+| `FLOW_APPLETS` | `./flow-applets` | Downloaded applet source code |
 
-Relativas al directorio desde donde corre el server, que es el del proyecto en
-el que estés trabajando.
+Relative to the directory the server runs from, which is the project you're
+working on.
 
-## Desarrollo
+## Development
 
-| Variable | Para qué |
+| Variable | What for |
 |---|---|
-| `FLOW_LIB` | Apuntar a otro checkout de `lib/` sin reinstalar el plugin |
+| `FLOW_LIB` | Point to a different `lib/` checkout without reinstalling the plugin |
 
-## Ejemplo
+## Example
 
 ```bash
-# una vez
+# once
 mkdir -p ~/.config/google-flow
-# exportar cookies de labs.google a ~/.config/google-flow/labs.google.cookies.json
+# export labs.google cookies to ~/.config/google-flow/labs.google.cookies.json
 chmod 600 ~/.config/google-flow/labs.google.cookies.json
 
-# por proyecto
-export FLOW_PACK=~/packs/mi-juego
-export FLOW_OUT=./assets/generados
+# per project
+export FLOW_PACK=~/packs/my-game
+export FLOW_OUT=./assets/generated
 ```
 
-Verificar con `python3 google-flow/doctor.py`.
+Verify with `python3 google-flow/doctor.py`.
 
-## Los ids no viven en este repo
+## The ids don't live in this repo
 
-Este repo es público, así que **no lleva ningún `appletId` ni `projectId` real**.
-Los que aparecen en la documentación y en `packs/_template/` son placeholders
-(`00000000-…`, `11111111-…`).
+This repo is public, so it **carries no real `appletId` or `projectId`**.
+The ones that appear in the documentation and in `packs/_template/` are
+placeholders (`00000000-…`, `11111111-…`).
 
-Los tuyos van en un pack propio, fuera del control de versiones:
+Yours go in your own pack, outside version control:
 
 ```bash
-mkdir -p ~/.config/google-flow/packs/mi-proyecto
-# escribí ahí pack.json con tu projectId y tus appletId
-export FLOW_PACK=~/.config/google-flow/packs/mi-proyecto
+mkdir -p ~/.config/google-flow/packs/my-project
+# write pack.json there with your projectId and your appletId
+export FLOW_PACK=~/.config/google-flow/packs/my-project
 ```
 
-Para descubrir los ids de tu cuenta, sin copiarlos a mano:
+To discover your account's ids without copying them by hand:
 
 ```bash
 python3 -c "import sys; sys.path.insert(0,'google-flow/lib'); import flow_client as f; \
 print('\n'.join(f\"{a['appletId']}  {a.get('title','')}\" for a in f.list_applets()))"
 ```
 
-### Una advertencia que cuesta tiempo descubrir
+### A warning that takes time to discover
 
-Varios applets tienen el botón de generar **deshabilitado** hasta que se sube
-una imagen de referencia, y el upload todavía no está implementado. Esos no son
-automatizables hoy: conviene marcarlos en tu `pack.json` para no perder tiempo.
+Several applets have the generate button **disabled** until a reference
+image is uploaded, and the upload isn't implemented yet. Those aren't
+automatable today: it's worth flagging them in your `pack.json` so you don't
+waste time.
 
-Y ojo con el proyecto: una cuenta puede tener varios, y Flow entra por defecto
-al que no siempre es el que tiene tus herramientas. Por eso el pack fija el
-`projectId` explícitamente.
+And watch out for the project: an account can have several, and Flow
+defaults to one that isn't always the one with your tools. That's why the
+pack fixes the `projectId` explicitly.

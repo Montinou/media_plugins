@@ -1,32 +1,32 @@
 {
   "name": "_template",
-  "description": "Esqueleto de pack. Copiar este directorio y completar, o generar todo con flow_scaffold_pack.",
+  "description": "Pack skeleton. Copy this directory and fill it in, or generate everything with flow_scaffold_pack.",
 
-  "_projectId": "Está en la URL de Flow: labs.google/fx/tools/flow/project/<AQUÍ>/tool/...",
+  "_projectId": "It's in the Flow URL: labs.google/fx/tools/flow/project/<HERE>/tool/...",
   "projectId": "00000000-0000-0000-0000-000000000000",
 
-  "_applets": "Una entrada por herramienta. La clave es un slug tuyo; lo que importa es appletId.",
+  "_applets": "One entry per tool. The key is a slug of your own; what matters is appletId.",
   "applets": {
-    "mi-herramienta": {
+    "my-tool": {
       "appletId": "11111111-1111-1111-1111-111111111111",
-      "displayName": "Mi Herramienta",
-      "description": "Qué produce, en una línea",
+      "displayName": "My Tool",
+      "description": "What it produces, in one line",
 
-      "_generateButton": "Texto exacto del botón de acción, como se ve en la UI. Sacarlo de flow_inspect_controls, no del código.",
+      "_generateButton": "Exact text of the action button, as shown in the UI. Get it from flow_inspect_controls, not from the code.",
       "generateButton": "GENERAR",
 
-      "_controls": "label es el texto que precede al valor en el control; current es el valor por defecto.",
+      "_controls": "label is the text preceding the value in the control; current is the default value.",
       "controls": [
         { "type": "dropdown", "label": "Estilo", "current": "Realista" },
-        { "type": "text", "placeholder": "Describí la escena" }
+        { "type": "text", "placeholder": "Describe the scene" }
       ],
 
-      "_vocabulary": "Valores válidos de cada dropdown, extraídos de constants.ts del applet.",
+      "_vocabulary": "Valid values for each dropdown, extracted from the applet's constants.ts.",
       "vocabulary": {
         "ESTILOS": ["Realista", "Pixel art", "Acuarela"]
       },
 
-      "_disabledActions": "Acciones que arrancan deshabilitadas. Si incluye el botón de generar, el applet necesita un insumo previo y no es automatizable todavía.",
+      "_disabledActions": "Actions that start disabled. If it includes the generate button, the applet needs a prior input and isn't automatable yet.",
       "disabledActions": []
     }
   }

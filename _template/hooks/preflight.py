@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Precondición de autenticación al arrancar la sesión.
+"""Auth precondition check at session startup.
 
-Puramente local: lee el JSON de cookies. No toca la red — un hook que sale a
-internet en cada arranque es exactamente lo que no queremos.
+Purely local: reads the cookies JSON. Doesn't touch the network — a hook
+that reaches out to the internet on every startup is exactly what we don't
+want.
 
-Sólo habla cuando hay algo que hacer. Si la sesión está sana, se calla.
+Only speaks up when there's something to do. If the session is healthy, it
+stays quiet.
 """
 from __future__ import annotations
 
@@ -29,7 +31,7 @@ def emit(context: str) -> None:
 
 
 def main() -> int:
-    # Ningún fallo del plugin debe romper el arranque de la sesión.
+    # No plugin failure should ever break session startup.
     try:
         from service import SERVICE, Service, ServiceAuthError
     except Exception:
@@ -38,8 +40,9 @@ def main() -> int:
     try:
         st = Service().auth_status()
     except ServiceAuthError:
-        # Sin cookies no hay nada que avisar: quizá el usuario no use este
-        # plugin en esta sesión. Las tools ya explican qué hacer si lo invoca.
+        # No cookies, nothing to warn about: the user may not be using this
+        # plugin in this session. The tools already explain what to do if
+        # invoked.
         return 0
     except Exception:
         return 0
@@ -48,10 +51,10 @@ def main() -> int:
         return 0
 
     emit(
-        f"[{SERVICE}] PRECONDICIÓN NO CUMPLIDA: la sesión no es válida.\n"
-        f"Antes de usar cualquier tool de {SERVICE}, pedile al usuario que "
-        f"reexporte las cookies con la sesión iniciada. No intentes operar ni "
-        "reintentar hasta que confirme."
+        f"[{SERVICE}] PRECONDITION NOT MET: the session is not valid.\n"
+        f"Before using any {SERVICE} tool, ask the user to re-export the "
+        f"cookies with the session logged in. Do not try to operate or "
+        "retry until they confirm."
     )
     return 0
 

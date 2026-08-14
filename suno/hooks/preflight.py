@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Precondición de autenticación de Suno, al arrancar la sesión.
+"""Suno authentication precondition, on session start.
 
-Puramente local: lee el JSON de cookies y decodifica el JWT. No toca la red —
-importante acá, porque cualquier request de script contra Suno es justo lo que
-no queremos hacer.
+Purely local: reads the cookies JSON and decodes the JWT. Doesn't touch the
+network — important here, because any script request against Suno is exactly
+what we don't want to do.
 
-Solo habla cuando hay algo que hacer.
+Only speaks up when there's something to act on.
 """
 from __future__ import annotations
 
@@ -38,20 +38,20 @@ def main() -> int:
     try:
         st = suno.auth_status()
     except Exception:
-        # Sin cookies no hay nada que avisar: quizá no se use Suno en esta sesión.
+        # No cookies means nothing to warn about: maybe Suno won't be used this session.
         return 0
 
     if st["valid"]:
         return 0
 
     emit(
-        "[suno] PRECONDICIÓN NO CUMPLIDA: el token de sesión de Suno está "
-        "vencido (no es renovable de forma programática).\n"
-        "Si el usuario pide algo de Suno, primero pedile que abra "
-        "https://suno.com/ en Chrome con la sesión iniciada — al navegar se "
-        "renueva del lado del navegador, que es donde operamos. Si además hace "
-        "falta diagnóstico local, que reexporte suno.com.cookies.json.\n"
-        "Recordá: nunca armar un cliente HTTP contra Suno."
+        "[suno] PRECONDITION NOT MET: the Suno session token is "
+        "expired (not programmatically renewable).\n"
+        "If the user asks for something from Suno, first ask them to open "
+        "https://suno.com/ in Chrome with the session logged in — navigating "
+        "renews it on the browser side, which is where we operate. If local "
+        "diagnostics are also needed, have them re-export suno.com.cookies.json.\n"
+        "Remember: never build an HTTP client against Suno."
     )
     return 0
 

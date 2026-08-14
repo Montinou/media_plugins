@@ -1,54 +1,54 @@
 ---
-description: Verificar la sesión de Suno y guiar la renovación si hace falta
+description: Check the Suno session and guide renewal if needed
 ---
 
 # /suno:auth
 
-Chequea la precondición de sesión de Suno. Es todo local: no hace una sola
-request al servicio.
+Checks the Suno session precondition. It's all local: not a single
+request to the service.
 
-## Pasos
+## Steps
 
-1. Llamá `suno_auth_status`.
+1. Call `suno_auth_status`.
 
-2. Interpretá y contá al usuario, en minutos y no en segundos crudos:
+2. Interpret and tell the user, in minutes rather than raw seconds:
 
-   - **`valid: true`** — informá handle, plan y cuánto queda. Listo.
-   - **`valid: false`** — el token venció. Aclarale que **para trabajar por
-     navegador no es un bloqueo**:
+   - **`valid: true`** — report handle, plan, and how much time is left. Done.
+   - **`valid: false`** — the token expired. Clarify that **this isn't a
+     blocker for working via browser**:
 
-     > La sesión de Suno figura vencida en el archivo de cookies. Si vamos a
-     > operar en el navegador, con que abras `https://suno.com/` en Chrome
-     > logueado alcanza: se renueva sola. Solo si querés diagnóstico local
-     > reexportá `suno.com.cookies.json`.
+     > The Suno session shows expired in the cookies file. If we're going
+     > to operate in the browser, just opening `https://suno.com/` in
+     > Chrome while logged in is enough: it renews itself. Only re-export
+     > `suno.com.cookies.json` if you want local diagnostics.
 
-   - **Error de autenticación** (falta el archivo o no tiene `__session`) — pedí
-     el export:
+   - **Authentication error** (file missing or no `__session`) — ask for
+     the export:
 
-     > 1. Abrí `https://suno.com/` en Chrome y confirmá que estás logueado.
-     > 2. Exportá las cookies del dominio a JSON.
-     > 3. Guardalo como `suno.com.cookies.json` en la raíz del repo.
+     > 1. Open `https://suno.com/` in Chrome and confirm you're logged in.
+     > 2. Export the domain's cookies to JSON.
+     > 3. Save it as `suno.com.cookies.json` at the repo root.
 
-3. Reportá siempre dos cosas del resultado, porque explican el diseño del plugin:
+3. Always report two things from the result, because they explain the plugin's design:
 
-   - **`can_refresh`** — casi siempre `false`: falta la cookie `__client` de
-     Clerk, así que no hay renovación programática posible.
-   - **`has_cf_clearance`** — normalmente `false`: sin eso, cualquier request de
-     script choca con Cloudflare.
+   - **`can_refresh`** — almost always `false`: the Clerk `__client`
+     cookie is missing, so there's no programmatic renewal available.
+   - **`has_cf_clearance`** — usually `false`: without it, any script
+     request runs into Cloudflare.
 
-   Por eso este plugin **no tiene cliente HTTP** y se opera por navegador.
+   That's why this plugin **has no HTTP client** and operates via browser.
 
-4. Higiene tras cada renovación:
+4. Hygiene after every renewal:
 
    ```bash
    chmod 600 suno.com.cookies.json
    git check-ignore -v suno.com.cookies.json
    ```
 
-   Si no está ignorado, avisá fuerte antes de seguir.
+   If it's not ignored, warn loudly before continuing.
 
-## Qué no hacer
+## What not to do
 
-- No armes un cliente HTTP contra Suno, por más cómodo que parezca.
-- No le pidas al usuario que pegue el token en el chat.
-- No intentes loguearte vos ni completar formularios de login.
+- Don't build an HTTP client against Suno, no matter how convenient it seems.
+- Don't ask the user to paste the token in chat.
+- Don't try to log in yourself or fill out login forms.

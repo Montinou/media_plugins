@@ -1,25 +1,25 @@
-"""Cliente de Google Flow Music (www.flowmusic.app).
+"""Google Flow Music (www.flowmusic.app) client.
 
-Sin dependencias fuera de la stdlib: el Python de Homebrew está bajo PEP 668 y
-no queremos obligar a `--break-system-packages`.
+No dependencies outside the stdlib: Homebrew's Python is under PEP 668 and
+we don't want to force `--break-system-packages`.
 
-Arquitectura del servicio (relevada por ingeniería inversa del bundle):
+Service architecture (reverse-engineered from the bundle):
 
-    front  ──► https://www.flowmusic.app/__api/*   proxy same-origin
-           ──► https://wb.flowmusic.app            backend real
+    front  ──► https://www.flowmusic.app/__api/*   same-origin proxy
+           ──► https://wb.flowmusic.app            real backend
     auth   ──► https://sb.flowmusic.app            Supabase
     audio  ──► storage.googleapis.com/producer-app-public/clips/{id}.m4a
 
-Dos cosas que no son obvias y cuestan horas si se ignoran:
+Two things that aren't obvious and cost hours if ignored:
 
-1. Hay que pegarle a `/__api`, no a `wb.flowmusic.app` (CORS desde el browser,
-   y desde script el proxy es igual de válido y más estable).
-2. El stem de `bass` está bloqueado en la UI y en `/__api/download/audio/{id}`
-   (403), pero el `audio_url` del clip apunta a un bucket público que responde
-   200. No es evasión de un control: es la misma URL que la propia app abre con
-   "Open Stem".
+1. You have to hit `/__api`, not `wb.flowmusic.app` (CORS from the browser,
+   and from a script the proxy is just as valid and more stable).
+2. The `bass` stem is blocked in the UI and in `/__api/download/audio/{id}`
+   (403), but the clip's `audio_url` points to a public bucket that responds
+   200. This isn't evading a control: it's the same URL the app itself opens
+   with "Open Stem".
 
-Ritmo: nunca ráfagas. Toda request pasa por `_throttle`.
+Pacing: never burst. Every request goes through `_throttle`.
 """
 
 from __future__ import annotations
@@ -35,10 +35,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-# Endpoints del servicio. Son defaults, no constantes: Flow Music expone
-# backends alternativos (`wb-snake`, `wb-yoshi`, `wb-zelda`) y el día que mueva
-# algo no queremos editar código. Nada de esto identifica a un usuario ni a un
-# proyecto — los ids concretos van en el repo que los usa, nunca acá.
+# Service endpoints. These are defaults, not constants: Flow Music exposes
+# alternate backends (`wb-snake`, `wb-yoshi`, `wb-zelda`), and the day it
+# moves something we don't want to edit code. None of this identifies a user
+# or a project — the actual ids go in the repo that uses them, never here.
 BASE = os.environ.get("FLOWMUSIC_API_BASE", "https://www.flowmusic.app/__api")
 SUPABASE = os.environ.get("FLOWMUSIC_SUPABASE", "https://sb.flowmusic.app")
 BUCKET = os.environ.get(
@@ -57,41 +57,41 @@ ALL_STEMS = frozenset(STEM_ORDER)
 
 
 class FlowMusicError(RuntimeError):
-    """Fallo operativo (HTTP, parseo, etc.)."""
+    """Operational failure (HTTP, parsing, etc.)."""
 
 
 class FlowMusicAuthError(FlowMusicError):
-    """La sesión no sirve: falta el archivo, está vencida o no se pudo renovar.
+    """The session is unusable: the file is missing, expired, or couldn't refresh.
 
-    Siempre trae un mensaje accionable — quien la reciba debe pedirle al usuario
-    que reexporte las cookies, no reintentar.
+    Always carries an actionable message — whoever receives it should ask the
+    user to re-export the cookies, not retry.
     """
 
 
 def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
-    """Ubica el JSON de cookies.
+    """Locates the cookies JSON.
 
-    Orden: argumento explícito, `FLOWMUSIC_COOKIES`, el proyecto en el que se
-    está trabajando (cwd y sus ancestros) y por último la config del usuario
+    Order: explicit argument, `FLOWMUSIC_COOKIES`, the project being worked
+    on (cwd and its ancestors), and finally the user config
     (`~/.config/flowmusic/`).
     """
-    # Un path explícito es una afirmación sobre QUÉ cuenta usar. Si no existe,
-    # fallamos: caer en silencio a otro archivo puede operar la cuenta
-    # equivocada sin que nadie se entere.
-    for source, value in (("argumento", explicit), ("FLOWMUSIC_COOKIES", os.environ.get("FLOWMUSIC_COOKIES"))):
+    # An explicit path is a claim about WHICH account to use. If it doesn't
+    # exist, we fail: silently falling back to another file could operate the
+    # wrong account without anyone noticing.
+    for source, value in (("argument", explicit), ("FLOWMUSIC_COOKIES", os.environ.get("FLOWMUSIC_COOKIES"))):
         if value:
             p = Path(value).expanduser()
             if not p.is_file():
                 raise FlowMusicAuthError(
-                    f"El {source} apunta a {p}, que no existe. No busco en otro "
-                    "lado para no usar una cuenta distinta a la que pediste."
+                    f"The {source} points to {p}, which doesn't exist. I won't look "
+                    "elsewhere to avoid using a different account than the one you requested."
                 )
             return p
 
-    # Sin path explícito: el proyecto en el que se está trabajando (cwd y sus
-    # ancestros, para funcionar desde un subdirectorio) y después la config del
-    # usuario. Nada relativo a la ubicación de este archivo: el plugin puede
-    # estar instalado en cualquier lado.
+    # Without an explicit path: the project being worked on (cwd and its
+    # ancestors, to work from a subdirectory) and then the user config.
+    # Nothing relative to this file's location: the plugin can be installed
+    # anywhere.
     candidates: list[Path] = []
     cwd = Path.cwd().resolve()
     for d in (cwd, *cwd.parents):
@@ -104,10 +104,10 @@ def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
         if c.is_file():
             return c
     raise FlowMusicAuthError(
-        f"No encontré {COOKIE_FILENAME}. Exportá las cookies de "
-        "www.flowmusic.app (con la sesión iniciada) y dejá el JSON en la raíz "
-        "del proyecto, en ~/.config/flowmusic/cookies.json, o apuntá "
-        "FLOWMUSIC_COOKIES al archivo."
+        f"Couldn't find {COOKIE_FILENAME}. Export the cookies for "
+        "www.flowmusic.app (while logged in) and put the JSON at the project "
+        "root, in ~/.config/flowmusic/cookies.json, or point "
+        "FLOWMUSIC_COOKIES at the file."
     )
 
 
@@ -124,19 +124,19 @@ class FlowMusic:
             self._cookies = json.loads(self.cookies_path.read_text())
         except json.JSONDecodeError as e:
             raise FlowMusicAuthError(
-                f"{self.cookies_path} no es JSON válido ({e}). Reexportá las cookies."
+                f"{self.cookies_path} is not valid JSON ({e}). Re-export the cookies."
             ) from e
         self._session = self._load_session()
 
-    # ------------------------------------------------------------------ sesión
+    # ------------------------------------------------------------------ session
 
     def _load_session(self) -> dict[str, Any]:
         parts = {c["name"]: c["value"] for c in self._cookies}
         chunks = sorted(k for k in parts if k.startswith("sb-sb-auth-token."))
         if not chunks:
             raise FlowMusicAuthError(
-                "El archivo no tiene cookies `sb-sb-auth-token.*`. Puede que hayas "
-                "exportado sin sesión iniciada, o de otro dominio."
+                "The file has no `sb-sb-auth-token.*` cookies. You may have "
+                "exported without being logged in, or from a different domain."
             )
         raw = "".join(parts[k] for k in chunks)
         if raw.startswith("base64-"):
@@ -144,7 +144,7 @@ class FlowMusic:
         try:
             return json.loads(base64.b64decode(raw + "=" * (-len(raw) % 4)))
         except Exception as e:
-            raise FlowMusicAuthError(f"No pude decodificar la sesión: {e}") from e
+            raise FlowMusicAuthError(f"Couldn't decode the session: {e}") from e
 
     @property
     def access_token(self) -> str:
@@ -158,7 +158,7 @@ class FlowMusic:
         return int(self._claims().get("exp", 0) - time.time())
 
     def auth_status(self) -> dict:
-        """Diagnóstico local, sin tocar la red."""
+        """Local diagnostic, without touching the network."""
         claims = self._claims()
         left = self.seconds_left()
         return {
@@ -171,16 +171,16 @@ class FlowMusic:
             and not self._session.get("refresh_token"),
         }
 
-    # -------------------------------------------------------------- renovación
+    # -------------------------------------------------------------- renewal
 
     ANON_RE = re.compile(
         r"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJ[\w-]{20,}\.[\w-]{10,}"
     )
 
     def _anon_key(self) -> str:
-        """Anon key pública de Supabase (role=anon; no es un secreto).
+        """Supabase's public anon key (role=anon; not a secret).
 
-        Orden: env, cache en disco, scrape del bundle `pages/_app-*.js`.
+        Order: env, on-disk cache, scrape from the `pages/_app-*.js` bundle.
         """
         if key := os.environ.get("FLOWMUSIC_ANON_KEY"):
             return key
@@ -191,24 +191,24 @@ class FlowMusic:
         html = self._raw_get("https://www.flowmusic.app/")
         chunk = re.search(r"/_next/static/chunks/pages/_app-[\w]+\.js", html.decode())
         if not chunk:
-            raise FlowMusicAuthError("No encontré el chunk _app para la anon key.")
+            raise FlowMusicAuthError("Couldn't find the _app chunk for the anon key.")
         bundle = self._raw_get(f"https://www.flowmusic.app{chunk.group(0)}")
         m = self.ANON_RE.search(bundle.decode("utf-8", "replace"))
         if not m:
-            raise FlowMusicAuthError("No pude extraer la anon key del bundle.")
+            raise FlowMusicAuthError("Couldn't extract the anon key from the bundle.")
         try:
             cache.write_text(m.group(0))
             cache.chmod(0o600)
         except OSError:
-            pass  # cachear es un lujo, no un requisito
+            pass  # caching is a nicety, not a requirement
         return m.group(0)
 
     def refresh(self) -> None:
         token = self._session.get("refresh_token")
         if not token:
             raise FlowMusicAuthError(
-                "La sesión venció y no hay refresh_token. Reexportá las cookies "
-                "de www.flowmusic.app."
+                "The session expired and there's no refresh_token. Re-export the "
+                "cookies from www.flowmusic.app."
             )
         body = json.dumps({"refresh_token": token}).encode()
         anon = self._anon_key()
@@ -228,10 +228,10 @@ class FlowMusic:
                 self._session = json.loads(r.read())
         except urllib.error.HTTPError as e:
             raise FlowMusicAuthError(
-                f"Supabase rechazó la renovación ({e.code}). Reexportá las cookies."
+                f"Supabase rejected the renewal ({e.code}). Re-export the cookies."
             ) from e
 
-    # ------------------------------------------------------------- transporte
+    # ------------------------------------------------------------- transport
 
     def _throttle(self) -> None:
         delta = time.monotonic() - self._last_call
@@ -272,8 +272,8 @@ class FlowMusic:
             detail = e.read()[:300].decode("utf-8", "replace")
             if e.code in (401, 403) and "/download/audio/" not in path:
                 raise FlowMusicAuthError(
-                    f"{e.code} en {path}. La sesión puede haber vencido; "
-                    "reexportá las cookies de www.flowmusic.app."
+                    f"{e.code} on {path}. The session may have expired; "
+                    "re-export the cookies from www.flowmusic.app."
                 ) from e
             raise FlowMusicError(f"{method.upper()} {path} -> {e.code}: {detail}") from e
 
@@ -283,8 +283,8 @@ class FlowMusic:
         return self.call("get", "/users/me")
 
     def credits(self) -> dict:
-        """Saldo real. Ojo: el contador del sidebar es el cupo diario gratis,
-        no el saldo — mirá `credits_remaining`."""
+        """Real balance. Note: the sidebar counter is the free daily quota,
+        not the balance — check `credits_remaining`."""
         data = self.call("get", "/billing/credits").get("data", {})
         return {
             "credits_remaining": data.get("credits_remaining"),
@@ -323,7 +323,7 @@ class FlowMusic:
         return dict(songs)
 
     def resolve_song(self, target: str) -> tuple[str, dict]:
-        """Acepta un source_clip_id o parte del título. Falla si es ambiguo."""
+        """Accepts a source_clip_id or part of the title. Fails if ambiguous."""
         songs = self.songs_with_stems()
         if target in songs:
             return target, songs[target]
@@ -335,12 +335,12 @@ class FlowMusic:
         if not hits:
             known = ", ".join(sorted(filter(None, (i["title"] for i in songs.values()))))
             raise FlowMusicError(
-                f"No hay stems para {target!r}. Con stems hoy: {known or '(ninguno)'}. "
-                "Si el tema existe pero no aparece, corré 'Split stems' en la UI."
+                f"No stems for {target!r}. With stems today: {known or '(none)'}. "
+                "If the track exists but doesn't show up, run 'Split stems' in the UI."
             )
         if len(hits) > 1:
             names = "; ".join(f"{i['title']} ({src})" for src, i in hits)
-            raise FlowMusicError(f"{target!r} es ambiguo: {names}")
+            raise FlowMusicError(f"{target!r} is ambiguous: {names}")
         return hits[0]
 
     def stem_urls(self, target: str) -> dict:
@@ -376,10 +376,10 @@ class FlowMusic:
         }
 
     def download_song(self, clip_id: str, outdir: str | os.PathLike, wav: bool = True) -> dict:
-        """Baja la mezcla. `wav=True` intenta el WAV (existe para canciones)."""
+        """Downloads the mix. `wav=True` tries the WAV (exists for songs)."""
         clip = next((c for c in self.clips() if c["id"] == clip_id), None)
         if clip is None:
-            raise FlowMusicError(f"No encontré el clip {clip_id}.")
+            raise FlowMusicError(f"Couldn't find clip {clip_id}.")
         url = (clip.get("wav_url") if wav else None) or clip.get("audio_url")
         if wav and clip.get("wav_url"):
             try:
@@ -389,7 +389,7 @@ class FlowMusic:
                 )
                 urllib.request.urlopen(req, timeout=30)
             except Exception:
-                url = clip.get("audio_url")  # los stems exponen wav_url que da 404
+                url = clip.get("audio_url")  # stems expose a wav_url that returns 404
         out = Path(outdir).expanduser()
         out.mkdir(parents=True, exist_ok=True)
         dest = out / f"{clip.get('title') or clip_id}{'.wav' if url.endswith('.wav') else '.m4a'}"

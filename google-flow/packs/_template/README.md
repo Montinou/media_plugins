@@ -1,28 +1,32 @@
-# Esqueleto de pack
+# Pack skeleton
 
-Copiar este directorio y completar a mano, o —más rápido— generar todo con:
+Copy this directory and fill it in by hand, or — faster — generate
+everything with:
 
 ```
-flow_scaffold_pack   dest: "./mi-pack",  name: "mi-pack"
+flow_scaffold_pack   dest: "./my-pack",  name: "my-pack"
 ```
 
-Las claves que empiezan con `_` son comentarios: JSON no los tiene, así que se
-usan campos que el lector ignora. Se pueden borrar.
+Keys starting with `_` are comments: JSON has none, so fields the reader
+ignores are used instead. They can be deleted.
 
-## Pasos si lo hacés a mano
+## Steps if you do it by hand
 
-1. **`projectId`** — de la URL de Flow:
+1. **`projectId`** — from the Flow URL:
    `labs.google/fx/tools/flow/project/<projectId>/tool/<appletId>`
-2. **`appletId`** — de la misma URL, o de `flow_list_applets`
-3. **`generateButton` y `controls`** — de `flow_inspect_controls`, que lee la UI
-   montada. No deducirlos del código: el JSX varía demasiado entre applets.
-4. **`vocabulary`** — de `flow_get_applet_code`, que devuelve `constants.ts`
-5. **Verificar** — `flow_dryrun_recipe` aplica una receta sin generar, costo cero
+2. **`appletId`** — from the same URL, or from `flow_list_applets`
+3. **`generateButton` and `controls`** — from `flow_inspect_controls`, which
+   reads the mounted UI. Don't deduce them from the code: the JSX varies
+   too much between applets.
+4. **`vocabulary`** — from `flow_get_applet_code`, which returns
+   `constants.ts`
+5. **Verify** — `flow_dryrun_recipe` applies a recipe without generating,
+   zero cost
 
-## Después
+## Afterward
 
 ```bash
-export FLOW_PACK=/ruta/a/mi-pack
+export FLOW_PACK=/path/to/my-pack
 ```
 
-Y `flow_pack_info` debería describirlo.
+And `flow_pack_info` should describe it.

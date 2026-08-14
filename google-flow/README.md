@@ -1,74 +1,74 @@
 # google-flow
 
-Plugin de Claude Code para producir assets con [Google Labs
-Flow](https://labs.google/fx/tools/flow): un MCP server con las tools y una
-skill con las guías de uso.
+Claude Code plugin for producing assets with [Google Labs
+Flow](https://labs.google/fx/tools/flow): an MCP server with the tools and a
+skill with the usage guides.
 
-Flow no tiene API pública. El plugin llega a él por la sesión del navegador y
-ejecuta las herramientas ("applets") conduciendo la app real, no replicando su
-protocolo.
+Flow has no public API. The plugin reaches it through the browser session and
+runs the tools ("applets") by driving the real app, not by replicating its
+protocol.
 
-## Instalación
+## Installation
 
 ```
 /plugin marketplace add Montinou/media_plugins
 /plugin install google-flow@media-plugins
 ```
 
-Después, las credenciales:
+Then, the credentials:
 
 ```bash
 mkdir -p ~/.config/google-flow
-# exportar las cookies de labs.google desde el navegador a:
+# export the labs.google cookies from the browser to:
 #   ~/.config/google-flow/labs.google.cookies.json
 chmod 600 ~/.config/google-flow/labs.google.cookies.json
 ```
 
-Y verificar:
+And verify:
 
 ```bash
 python3 google-flow/doctor.py
 ```
 
-El doctor revisa dependencias, Chrome, credenciales y el handshake del MCP, y
-dice qué hacer con cada cosa que falte.
+The doctor checks dependencies, Chrome, credentials, and the MCP handshake,
+and says what to do about anything missing.
 
-## Requisitos
+## Requirements
 
-- `python3` con `playwright`, `requests` y `pillow`
-- Google Chrome instalado (el driver usa `channel="chrome"`)
-- Cookies de sesión de labs.google
+- `python3` with `playwright`, `requests`, and `pillow`
+- Google Chrome installed (the driver uses `channel="chrome"`)
+- labs.google session cookies
 
-No necesita el SDK de MCP: el server habla JSON-RPC sobre stdio con la stdlib.
-Es a propósito — el Python de Homebrew está bajo PEP 668 e instalar el SDK
-obligaría a `--break-system-packages` sobre el intérprete del sistema.
+Doesn't need the MCP SDK: the server speaks JSON-RPC over stdio with the
+stdlib. That's on purpose — Homebrew's Python is under PEP 668 and installing
+the SDK would force `--break-system-packages` on the system interpreter.
 
 ## Tools
 
-| Tool | Costo | Qué hace |
+| Tool | Cost | What it does |
 |---|---|---|
-| `flow_session_status` | — | Usuario, vencimiento y créditos |
-| `flow_list_applets` | — | Catálogo de herramientas |
-| `flow_get_applet_code` | — | Código fuente y `constants.ts` de un applet |
-| `flow_inspect_controls` | — | Controles reales de la UI |
-| `flow_dryrun_recipe` | — | Aplica una receta sin generar |
-| `flow_generate` | 0 créditos | Una imagen |
-| `flow_batch_generate` | 0 créditos | Producto cartesiano de una matriz |
-| `flow_upscale_local` | — | Upscale local, nearest o lanczos |
-| `flow_upscale_native` | **cuesta** | 2K/4K de Flow; requiere Chrome real |
+| `flow_session_status` | — | User, expiration, and credits |
+| `flow_list_applets` | — | Tool catalog |
+| `flow_get_applet_code` | — | Source code and `constants.ts` for an applet |
+| `flow_inspect_controls` | — | Real UI controls |
+| `flow_dryrun_recipe` | — | Applies a recipe without generating |
+| `flow_generate` | 0 credits | One image |
+| `flow_batch_generate` | 0 credits | Cartesian product of a matrix |
+| `flow_upscale_local` | — | Local upscale, nearest or lanczos |
+| `flow_upscale_native` | **costs** | Flow's 2K/4K; requires real Chrome |
 
-Que generar salga 0 créditos está medido, no supuesto: cada corrida compara
-`/v1/credits` antes y después y reporta el delta. Si eso cambia, se ve en la
-corrida.
+That generating costs 0 credits is measured, not assumed: every run compares
+`/v1/credits` before and after and reports the delta. If that changes, it
+shows up in the run.
 
-## Comandos
+## Commands
 
-- `/flow-status` — sesión, créditos y herramientas propias
-- `/flow-sprites <descripción>` — grillas de 8 direcciones con el Sprite Forge
+- `/flow-status` — session, credits, and own tools
+- `/flow-sprites <description>` — 8-direction grids with the Sprite Forge
 
-## Uso desde línea de comandos
+## Command-line usage
 
-Las bibliotecas de `lib/` también sirven como CLI:
+The `lib/` libraries also work as a CLI:
 
 ```bash
 python3 lib/flow_client.py list
@@ -77,38 +77,39 @@ python3 lib/flow_driver.py batch recipes/sprite-forge-facciones.json --limit 2
 python3 lib/flow_upscale.py flow-out/ -f 2
 ```
 
-Las salidas van al cwd (`flow-out/`, `flow-applets/`) salvo que se definan
-`FLOW_OUT`, `FLOW_OUT` o `FLOW_APPLETS`.
+Outputs go to cwd (`flow-out/`, `flow-applets/`) unless `FLOW_OUT`, `FLOW_OUT`
+or `FLOW_APPLETS` are set.
 
-## Configuración
+## Configuration
 
-| Variable | Para qué |
+| Variable | What for |
 |---|---|
-| `FLOW_COOKIES` | Ruta al archivo de cookies |
-| `FLOW_CONFIG_DIR` | Directorio de config (default `~/.config/google-flow`) |
-| `FLOW_PROJECT_ID` | Proyecto de Flow a usar |
-| `FLOW_OUT` | Carpeta de salida de las tools de MCP |
-| `FLOW_APPLETS` | Dónde guardar el código de applets descargado |
-| `FLOW_LIB` | Apuntar a otro checkout de `lib/` (desarrollo) |
+| `FLOW_COOKIES` | Path to the cookies file |
+| `FLOW_CONFIG_DIR` | Config directory (default `~/.config/google-flow`) |
+| `FLOW_PROJECT_ID` | Flow project to use |
+| `FLOW_OUT` | Output folder for the MCP tools |
+| `FLOW_APPLETS` | Where to save downloaded applet code |
+| `FLOW_LIB` | Point to a different `lib/` checkout (development) |
 
-## Lo que no hace
+## What it doesn't do
 
-- **Subir imágenes de referencia.** Sin eso, el Map Compiler y el modo colisión
-  del Layer Forge no son automatizables: los dos arrancan de un mapa existente.
-- **Crear applets.** El endpoint `flowCreationAgent/sessions` está mapeado pero
-  no implementado.
+- **Upload reference images.** Without that, the Map Compiler and the Layer
+  Forge's collision mode can't be automated: both start from an existing map.
+- **Create applets.** The `flowCreationAgent/sessions` endpoint is mapped but
+  not implemented.
 
-## Ritmo
+## Pace
 
-El driver se mueve despacio a propósito y en batch reutiliza una sola pestaña.
-Google Labs no publica límites de uso, y una cuenta marcada como automatizada se
-pierde con todo el trabajo que dependía de ella. Las constantes están en
-`lib/flow_driver.py`; no bajarlas.
+The driver moves slowly on purpose, and in batch mode it reuses a single tab.
+Google Labs doesn't publish usage limits, and an account flagged as automated
+gets lost along with all the work that depended on it. The constants live in
+`lib/flow_driver.py`; do not lower them.
 
-Cuando una ruta rechaza a un browser automatizado, la salida es conectarse a un
-Chrome real por CDP (`cdp_url`), no falsear el fingerprint.
+When a route rejects an automated browser, the way out is connecting to a
+real Chrome over CDP (`cdp_url`), not faking the fingerprint.
 
-## Detalles técnicos
+## Technical details
 
-`skills/flow-assets/references/api-map.md` tiene el mapa de endpoints, el
-mecanismo de autenticación en dos saltos, y qué protege reCAPTCHA y qué no.
+`skills/flow-assets/references/api-map.md` has the endpoint map, the
+two-hop authentication mechanism, and what reCAPTCHA protects and what it
+doesn't.

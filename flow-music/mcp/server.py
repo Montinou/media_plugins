@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Servidor MCP para Google Flow Music.
+"""MCP server for Google Flow Music.
 
-JSON-RPC 2.0 sobre stdio con la stdlib nada más: el Python de Homebrew está
-bajo PEP 668 e instalar el SDK oficial obligaría a `--break-system-packages`.
+JSON-RPC 2.0 over stdio using only the stdlib: Homebrew's Python is under
+PEP 668, and installing the official SDK would force `--break-system-packages`.
 
-Convención de este marketplace:
-la lib se resuelve desde el plugin, y los errores de autenticación se
-devuelven como `isError` con instrucciones para el usuario — nunca se
-reintenta contra el servicio.
+Convention for this marketplace:
+the lib is resolved from the plugin, and authentication errors are
+returned as `isError` with instructions for the user — never retried
+against the service.
 """
 from __future__ import annotations
 
@@ -66,13 +66,13 @@ def _default_outdir() -> Path:
 
 @tool(
     "flowmusic_auth_status",
-    "Estado de la sesión de Flow Music: a quién pertenece, cuánto le queda y si "
-    "puede renovarse sola. Es puramente local — no toca la red ni gasta nada. "
-    "Usala SIEMPRE antes de la primera operación de una sesión de trabajo, y "
-    "cada vez que otra tool falle por autenticación, para distinguir una cookie "
-    "vencida de un problema real.",
-    {"properties": {"cookies_path": {"type": "string", "description": "Ruta al JSON de cookies. Opcional."}}},
-    title="Estado de sesión",
+    "Flow Music session status: who it belongs to, how much time is left, and "
+    "whether it can refresh itself. Purely local — doesn't touch the network "
+    "or spend anything. ALWAYS use it before the first operation of a work "
+    "session, and every time another tool fails on authentication, to "
+    "distinguish an expired cookie from a real problem.",
+    {"properties": {"cookies_path": {"type": "string", "description": "Path to the cookies JSON. Optional."}}},
+    title="Session status",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -80,22 +80,22 @@ def _auth_status(args: dict) -> dict:
     try:
         st = _client(args).auth_status()
     except FlowMusicAuthError as e:
-        return {"valid": False, "problem": str(e), "action": "pedirle al usuario que reexporte las cookies"}
+        return {"valid": False, "problem": str(e), "action": "ask the user to re-export the cookies"}
     if not st["valid"] and st["can_refresh"]:
-        st["action"] = "el token venció pero hay refresh_token: se renueva solo en la próxima llamada"
+        st["action"] = "the token expired but there's a refresh_token: it renews itself on the next call"
     elif not st["valid"]:
-        st["action"] = "pedirle al usuario que reexporte las cookies de www.flowmusic.app"
+        st["action"] = "ask the user to re-export the cookies from www.flowmusic.app"
     return st
 
 
 @tool(
     "flowmusic_account",
-    "Cuenta y saldo: usuario y créditos disponibles. El contador que muestra el "
-    "sidebar de la web es el cupo diario gratis, NO el saldo — el saldo real es "
-    "`credits_remaining`. Consultala antes de proponer generar música, para no "
-    "sobreestimar ni subestimar lo que hay.",
+    "Account and balance: user and available credits. The counter shown in "
+    "the web sidebar is the free daily quota, NOT the balance — the real "
+    "balance is `credits_remaining`. Check it before proposing to generate "
+    "music, so you don't overestimate or underestimate what's available.",
     {"properties": {"cookies_path": {"type": "string"}}},
-    title="Cuenta y créditos",
+    title="Account and credits",
     readOnlyHint=True,
 )
 def _account(args: dict) -> dict:
@@ -105,16 +105,16 @@ def _account(args: dict) -> dict:
 
 @tool(
     "flowmusic_list_songs",
-    "Canciones del usuario, las más recientes primero: id, título, tipo de "
-    "operación y duración. Sirve para encontrar el clip_id de un tema antes de "
-    "bajarlo o de separarle stems.",
+    "User's songs, most recent first: id, title, operation type, and "
+    "duration. Useful for finding a track's clip_id before downloading it or "
+    "splitting its stems.",
     {
         "properties": {
-            "limit": {"type": "integer", "description": "Máximo a devolver (default 20)."},
+            "limit": {"type": "integer", "description": "Maximum to return (default 20)."},
             "cookies_path": {"type": "string"},
         }
     },
-    title="Listar canciones",
+    title="List songs",
     readOnlyHint=True,
 )
 def _list_songs(args: dict) -> dict:
@@ -136,11 +136,12 @@ def _list_songs(args: dict) -> dict:
 
 @tool(
     "flowmusic_list_stems",
-    "Temas que YA tienen stems separados, con qué stems tiene cada uno. "
-    "Flow Music no separa solo: si un tema no aparece acá, hay que abrir la web "
-    "y correrle 'Split stems' primero (eso no lo puede hacer esta tool).",
+    "Tracks that ALREADY have separated stems, with which stems each one "
+    "has. Flow Music doesn't separate on its own: if a track doesn't show up "
+    "here, you have to open the web and run 'Split stems' on it first (this "
+    "tool can't do that).",
     {"properties": {"cookies_path": {"type": "string"}}},
-    title="Temas con stems",
+    title="Tracks with stems",
     readOnlyHint=True,
 )
 def _list_stems(args: dict) -> dict:
@@ -156,23 +157,24 @@ def _list_stems(args: dict) -> dict:
             }
             for src, i in songs.items()
         ],
-        "note": "Si falta un tema, correle 'Split stems' en la UI de Flow Music.",
+        "note": "If a track is missing, run 'Split stems' on it in the Flow Music UI.",
     }
 
 
 @tool(
     "flowmusic_stem_urls",
-    "URLs de descarga de los stems de un tema, SIN bajar nada. Barato y sin "
-    "efectos: úsala para mostrarle al usuario qué se va a bajar antes de "
-    "gastar ancho de banda, o para verificar que el bass está disponible.",
+    "Download URLs for a track's stems, WITHOUT downloading anything. Cheap "
+    "and with no side effects: use it to show the user what's about to be "
+    "downloaded before spending bandwidth, or to verify that the bass is "
+    "available.",
     {
         "properties": {
-            "song": {"type": "string", "description": "source_clip_id o parte del título."},
+            "song": {"type": "string", "description": "source_clip_id or part of the title."},
             "cookies_path": {"type": "string"},
         },
         "required": ["song"],
     },
-    title="URLs de stems",
+    title="Stem URLs",
     readOnlyHint=True,
 )
 def _stem_urls(args: dict) -> dict:
@@ -181,18 +183,19 @@ def _stem_urls(args: dict) -> dict:
 
 @tool(
     "flowmusic_download_stems",
-    "Baja los stems de un tema a disco, el de bass incluido. Escribe archivos: "
-    "confirmá el destino con el usuario si no es el default. Los stems vienen en "
-    "m4a (AAC) — es lo único que entrega el servicio para stems, no hay WAV.",
+    "Downloads a track's stems to disk, bass included. Writes files: confirm "
+    "the destination with the user if it isn't the default. Stems come in "
+    "m4a (AAC) — that's the only format the service delivers for stems, "
+    "there's no WAV.",
     {
         "properties": {
-            "song": {"type": "string", "description": "source_clip_id o parte del título."},
-            "outdir": {"type": "string", "description": "Carpeta destino. Default: ~/Downloads."},
+            "song": {"type": "string", "description": "source_clip_id or part of the title."},
+            "outdir": {"type": "string", "description": "Destination folder. Default: ~/Downloads."},
             "cookies_path": {"type": "string"},
         },
         "required": ["song"],
     },
-    title="Descargar stems",
+    title="Download stems",
     readOnlyHint=False,
     destructiveHint=False,
     openWorldHint=True,
@@ -205,18 +208,18 @@ def _download_stems(args: dict) -> dict:
 
 @tool(
     "flowmusic_download_song",
-    "Baja la mezcla completa de una canción. Intenta WAV (sin pérdida) y cae a "
-    "m4a si no hay. Escribe un archivo en disco.",
+    "Downloads a song's complete mix. Tries WAV (lossless) and falls back to "
+    "m4a if unavailable. Writes a file to disk.",
     {
         "properties": {
             "clip_id": {"type": "string"},
             "outdir": {"type": "string", "description": "Default: ~/Downloads."},
-            "wav": {"type": "boolean", "description": "Preferir WAV. Default true."},
+            "wav": {"type": "boolean", "description": "Prefer WAV. Default true."},
             "cookies_path": {"type": "string"},
         },
         "required": ["clip_id"],
     },
-    title="Descargar canción",
+    title="Download song",
     readOnlyHint=False,
     destructiveHint=False,
     openWorldHint=True,
@@ -272,7 +275,7 @@ def handle(msg: dict) -> dict | None:
         if fn is None:
             return _text(
                 rid,
-                f"No existe la tool {name!r}. Disponibles: {', '.join(sorted(HANDLERS))}",
+                f"Tool {name!r} doesn't exist. Available: {', '.join(sorted(HANDLERS))}",
                 is_error=True,
             )
         try:
@@ -281,22 +284,21 @@ def handle(msg: dict) -> dict | None:
         except FlowMusicAuthError as e:
             return _text(
                 rid,
-                f"AUTENTICACIÓN: {e}\n\n"
-                "No reintentes ni pruebes otras tools: pedile al usuario que "
-                "reexporte las cookies de www.flowmusic.app con la sesión "
-                "iniciada y las deje en la raíz del repo como "
-                "www.flowmusic.app.cookies.json.",
+                f"AUTHENTICATION: {e}\n\n"
+                "Don't retry or try other tools: ask the user to re-export the "
+                "cookies from www.flowmusic.app while logged in and leave them "
+                "at the repo root as www.flowmusic.app.cookies.json.",
                 is_error=True,
             )
         except FlowMusicError as e:
-            return _text(rid, f"Error de Flow Music: {e}", is_error=True)
+            return _text(rid, f"Flow Music error: {e}", is_error=True)
         except Exception as e:  # noqa: BLE001
             return _text(rid, f"{type(e).__name__}: {e}", is_error=True)
 
     return {
         "jsonrpc": "2.0",
         "id": rid,
-        "error": {"code": -32601, "message": f"Método no soportado: {method}"},
+        "error": {"code": -32601, "message": f"Unsupported method: {method}"},
     }
 
 

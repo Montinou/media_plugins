@@ -1,67 +1,68 @@
 ---
-description: Sacar los stems de un tema de Suno vía Studio (Export → Multitrack) y verificarlos
-argument-hint: "[nombre del tema o proyecto]"
+description: Get the stems of a Suno track via Studio (Export → Multitrack) and verify them
+argument-hint: "[track or project name]"
 ---
 
 # /suno:stems
 
-Obtiene los stems de un tema de Suno usando el Studio, que es la vía oficial y
-la que da mejor calidad: 7 pistas en WAV sin pérdida, alineadas.
+Gets the stems of a Suno track using the Studio, which is the official
+route and gives the best quality: 7 lossless WAV tracks, aligned.
 
-Argumento: `$ARGUMENTS` — nombre del tema o del proyecto. Si viene vacío,
-mostrá lo que haya y preguntá.
+Argument: `$ARGUMENTS` — track or project name. If empty, show what's
+available and ask.
 
-## Pasos
+## Steps
 
-1. **Precondición.** `suno_auth_status`. Si venció, pedile al usuario que abra
-   `https://suno.com/` logueado en Chrome (para navegador alcanza con eso).
+1. **Precondition.** `suno_auth_status`. If expired, ask the user to open
+   `https://suno.com/` logged in on Chrome (for browser work, that's enough).
 
-2. **Abrí el Studio** en una pestaña propia: `https://suno.com/studio`.
-   Leé la skill `suno-studio` antes de operar.
+2. **Open the Studio** in its own tab: `https://suno.com/studio`.
+   Read the `suno-studio` skill before operating.
 
-3. **Cargá el tema.** `Edit in Studio` sobre la canción, o el proyecto guardado.
-   Si sale el diálogo de **Legacy**, *preguntale al usuario* si quiere
-   `Studio 2.0` (crea una copia en su cuenta) o `1.2 Legacy` (no crea nada).
-   No elijas por él.
+3. **Load the track.** `Edit in Studio` on the song, or the saved
+   project. If the **Legacy** dialog comes up, *ask the user* whether they
+   want `Studio 2.0` (creates a copy in their account) or `1.2 Legacy`
+   (creates nothing). Don't choose for them.
 
-4. **Verificá que cargó**: deben aparecer los tracks separados (Vocals, Backing
-   Vocals, Drums, Bass, Guitar, Synth) con sus waveforms.
-   **No toques ningún play.**
+4. **Verify it loaded**: the separated tracks should appear (Vocals,
+   Backing Vocals, Drums, Bass, Guitar, Synth) with their waveforms.
+   **Don't touch any play control.**
 
-5. **Exportá**: `Export` → `Multitrack`.
+5. **Export**: `Export` → `Multitrack`.
 
-6. **Esperá.** Baja un zip grande (cientos de MB; ~421 MB para 3 min). Monitoreá
-   el `.crdownload` por tamaño:
+6. **Wait.** A large zip downloads (hundreds of MB; ~421 MB for 3 min).
+   Monitor the `.crdownload` by size:
 
    ```bash
    ls -l ~/Downloads/*.crdownload 2>/dev/null
    ```
 
-   No vuelvas a apretar Export ni recargues la página mientras tanto.
+   Don't press Export again or reload the page in the meantime.
 
-7. **Verificá sin extraer todo:**
+7. **Verify without extracting everything:**
 
    ```
-   suno_inspect_multitrack  zip_path=~/Downloads/<nombre>.zip
+   suno_inspect_multitrack  zip_path=~/Downloads/<name>.zip
    ```
 
-   Chequeá `aligned: true` y `stems_missing` vacío.
+   Check `aligned: true` and `stems_missing` empty.
 
-8. **Control de contenido** sobre el bass:
+8. **Content check** on the bass:
 
    ```bash
-   unzip -o -q ~/Downloads/<nombre>.zip "*Bass.wav" -d /tmp/suno-check
+   unzip -o -q ~/Downloads/<name>.zip "*Bass.wav" -d /tmp/suno-check
    ```
 
-   luego `suno_verify_stem` sobre ese archivo: debe dar **dominancia grave**
-   (referencia real: 17,3 dB). Si da dominancia aguda, algo salió mal — decilo.
+   then `suno_verify_stem` on that file: it should show **low-end
+   dominance** (real reference: 17.3 dB). If it shows high-end dominance,
+   something went wrong — say so.
 
-9. **Informá** ruta del zip, cantidad de tracks, formato, alineación y el
-   resultado de la verificación.
+9. **Report** the zip path, track count, format, alignment, and the
+   verification result.
 
-## Recordatorios
+## Reminders
 
-- **Nunca reproduzcas** para verificar. Medí.
-- Si creaste una copia del proyecto en el paso 3, **decíselo al usuario** al
-  final para que decida si la conserva.
-- No borres el zip ni archivos previos del usuario por tu cuenta.
+- **Never play** to verify. Measure.
+- If you created a copy of the project in step 3, **tell the user** at
+  the end so they can decide whether to keep it.
+- Don't delete the zip or the user's prior files on your own.

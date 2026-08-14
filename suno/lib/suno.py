@@ -1,13 +1,13 @@
-"""Suno — utilidades locales.
+"""Suno — local utilities.
 
-**Este módulo no hace requests a Suno, y es a propósito.** Suno está detrás de
-Cloudflare, sus ToS prohíben el acceso automatizado, y el export de cookies del
-navegador no trae `__client` (la cookie con la que Clerk emite tokens nuevos),
-así que un cliente HTTP moriría a la hora igual. La operación real va por
-navegador con la sesión del usuario; acá solo hay diagnóstico local y
-verificación de lo que ya se descargó.
+**This module makes no requests to Suno, and it's on purpose.** Suno sits
+behind Cloudflare, its ToS forbid automated access, and the browser's cookie
+export doesn't include `__client` (the cookie Clerk uses to issue new
+tokens), so an HTTP client would die after an hour anyway. The actual
+operation goes through the browser with the user's session; here there's
+only local diagnostics and verification of what's already been downloaded.
 
-Todo lo de abajo lee archivos del disco. Nada toca la red.
+Everything below reads files from disk. Nothing touches the network.
 """
 
 from __future__ import annotations
@@ -21,11 +21,11 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-# Default overrideable: nada acá identifica a un usuario ni a un proyecto.
+# Overrideable default: nothing here identifies a user or a project.
 COOKIE_FILENAME = os.environ.get("SUNO_COOKIE_FILENAME", "suno.com.cookies.json")
 
-# Stems que Suno Studio produce al cargar una canción. Es más granular que
-# Flow Music (que hace 4): acá aparecen coros, guitarra y sintes por separado.
+# Stems that Suno Studio produces when a song is loaded. More granular than
+# Flow Music (which does 4): backing vocals, guitar, and synth appear separately here.
 KNOWN_STEMS = (
     "Vocals",
     "Backing Vocals",
@@ -41,26 +41,26 @@ class SunoError(RuntimeError):
 
 
 class SunoAuthError(SunoError):
-    """Sesión ausente o vencida. Siempre requiere acción del usuario:
-    en Suno no hay renovación programática posible."""
+    """Session missing or expired. Always requires user action:
+    Suno has no programmatic renewal available."""
 
 
 def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
-    # Un path explícito es una afirmación sobre QUÉ cuenta usar. Si no existe,
-    # fallamos en vez de caer en silencio a otro archivo.
-    for source, value in (("argumento", explicit), ("SUNO_COOKIES", os.environ.get("SUNO_COOKIES"))):
+    # An explicit path is a statement about WHICH account to use. If it
+    # doesn't exist, fail instead of silently falling back to another file.
+    for source, value in (("argument", explicit), ("SUNO_COOKIES", os.environ.get("SUNO_COOKIES"))):
         if value:
             p = Path(value).expanduser()
             if not p.is_file():
                 raise SunoAuthError(
-                    f"El {source} apunta a {p}, que no existe. No busco en otro "
-                    "lado para no usar una cuenta distinta a la que pediste."
+                    f"The {source} points to {p}, which doesn't exist. I won't "
+                    "look elsewhere to avoid using a different account than the one you asked for."
                 )
             return p
 
-    # Sin path explícito: el proyecto actual (cwd y ancestros) y después la
-    # config del usuario. Nada relativo a este archivo: el plugin puede estar
-    # instalado en cualquier lado.
+    # No explicit path: the current project (cwd and ancestors), then the
+    # user config. Nothing relative to this file: the plugin can be
+    # installed anywhere.
     candidates: list[Path] = []
     cwd = Path.cwd().resolve()
     for d in (cwd, *cwd.parents):
@@ -73,9 +73,9 @@ def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
         if c.is_file():
             return c
     raise SunoAuthError(
-        f"No encontré {COOKIE_FILENAME}. Exportá las cookies de suno.com con la "
-        "sesión iniciada y dejá el JSON en la raíz del proyecto, en "
-        "~/.config/suno/cookies.json, o apuntá SUNO_COOKIES al archivo."
+        f"Couldn't find {COOKIE_FILENAME}. Export suno.com cookies with the "
+        "session logged in and place the JSON at the project root, at "
+        "~/.config/suno/cookies.json, or point SUNO_COOKIES to the file."
     )
 
 
@@ -84,27 +84,27 @@ def _b64url(seg: str) -> dict:
 
 
 def auth_status(cookies_path: str | os.PathLike | None = None) -> dict[str, Any]:
-    """Diagnóstico local de la sesión de Suno. No toca la red."""
+    """Local diagnostics of the Suno session. Doesn't touch the network."""
     path = find_cookies(cookies_path)
     try:
         items = json.loads(path.read_text())
     except json.JSONDecodeError as e:
-        raise SunoAuthError(f"{path} no es JSON válido ({e}).") from e
+        raise SunoAuthError(f"{path} isn't valid JSON ({e}).") from e
 
     names = {c["name"] for c in items}
     sessions = [c for c in items if c["name"] == "__session"]
     if not sessions:
         raise SunoAuthError(
-            "El archivo no tiene cookie `__session`. Puede que hayas exportado "
-            "sin sesión iniciada."
+            "The file has no `__session` cookie. You may have exported "
+            "without being logged in."
         )
-    # Puede haber una por `suno.com` y otra por `.suno.com`; sirve cualquiera.
+    # There can be one for `suno.com` and another for `.suno.com`; either works.
     token = max((c["value"] for c in sessions), key=len)
 
     try:
         claims = _b64url(token.split(".")[1])
     except Exception as e:
-        raise SunoAuthError(f"No pude decodificar el JWT de sesión: {e}") from e
+        raise SunoAuthError(f"Couldn't decode the session JWT: {e}") from e
 
     left = int(claims.get("exp", 0) - time.time())
     return {
@@ -115,15 +115,15 @@ def auth_status(cookies_path: str | os.PathLike | None = None) -> dict[str, Any]
         "plan": claims.get("plan"),
         "expires_in_seconds": left,
         "valid": left > 0,
-        # Clerk necesita `__client` para emitir tokens nuevos; los exports del
-        # navegador normalmente solo traen `__client_uat`, que es un timestamp.
+        # Clerk needs `__client` to issue new tokens; browser exports
+        # usually only carry `__client_uat`, which is a timestamp.
         "can_refresh": "__client" in names,
         "has_cf_clearance": "cf_clearance" in names,
         "automation_advice": (
-            "Operar por navegador con la sesión del usuario. No armar cliente "
-            "HTTP: sin __client no hay renovación, sin cf_clearance las requests "
-            "de script disparan challenges de Cloudflare, y los ToS prohíben el "
-            "acceso automatizado."
+            "Operate via browser with the user's session. Don't build an HTTP "
+            "client: without __client there's no renewal, without cf_clearance "
+            "script requests trigger Cloudflare challenges, and the ToS forbid "
+            "automated access."
         ),
     }
 
@@ -140,21 +140,21 @@ def _ffprobe(path: Path) -> dict:
         )
         return (json.loads(out.stdout).get("streams") or [{}])[0]
     except FileNotFoundError:
-        return {"error": "ffprobe no está instalado"}
+        return {"error": "ffprobe isn't installed"}
     except Exception as e:  # noqa: BLE001
         return {"error": str(e)}
 
 
 def inspect_multitrack(zip_path: str | os.PathLike) -> dict:
-    """Analiza un zip de `Export → Multitrack` de Suno Studio, sin extraerlo.
+    """Analyzes a `Export → Multitrack` zip from Suno Studio, without extracting it.
 
-    Verifica lo que importa: que estén los stems esperados y que todos midan lo
-    mismo (Suno los exporta alineados desde 0, así que un tamaño distinto es
-    señal de que algo se cortó).
+    Verifies what matters: that the expected stems are present and that they
+    all measure the same (Suno exports them aligned from 0, so a different
+    size is a sign something got cut off).
     """
     p = Path(zip_path).expanduser()
     if not p.is_file():
-        raise SunoError(f"No existe {p}.")
+        raise SunoError(f"{p} doesn't exist.")
     with zipfile.ZipFile(p) as z:
         entries = [
             {"name": i.filename, "bytes": i.file_size}
@@ -162,10 +162,10 @@ def inspect_multitrack(zip_path: str | os.PathLike) -> dict:
             if not i.is_dir()
         ]
     if not entries:
-        raise SunoError(f"{p} está vacío.")
+        raise SunoError(f"{p} is empty.")
 
     sizes = {e["bytes"] for e in entries}
-    # Los nombres vienen como "4 Bass.wav": prefijo de orden de pista.
+    # Names come as "4 Bass.wav": track-order prefix.
     def stem_of(name: str) -> str:
         base = Path(name).stem
         return base.split(" ", 1)[1] if " " in base and base.split(" ", 1)[0].isdigit() else base
@@ -180,20 +180,20 @@ def inspect_multitrack(zip_path: str | os.PathLike) -> dict:
         "stems_missing": [s for s in KNOWN_STEMS if s not in found],
         "aligned": len(sizes) == 1,
         "alignment_note": (
-            "Todos los tracks pesan igual: exportados alineados desde 0, listos "
-            "para importar a un DAW."
+            "All tracks are the same size: exported aligned from 0, ready "
+            "to import into a DAW."
             if len(sizes) == 1
-            else "OJO: hay tamaños distintos. Revisá si algún track quedó cortado."
+            else "WATCH OUT: sizes differ. Check whether a track got cut off."
         ),
     }
 
 
 def band_energy(path: str | os.PathLike, split_hz: int = 250) -> dict:
-    """RMS por debajo y por encima de `split_hz`, para verificar que un stem
-    contenga lo que su nombre dice. Requiere ffmpeg."""
+    """RMS below and above `split_hz`, to verify that a stem contains what
+    its name says. Requires ffmpeg."""
     p = Path(path).expanduser()
     if not p.is_file():
-        raise SunoError(f"No existe {p}.")
+        raise SunoError(f"{p} doesn't exist.")
 
     def rms(filt: str) -> float | None:
         try:
@@ -206,7 +206,7 @@ def band_energy(path: str | os.PathLike, split_hz: int = 250) -> dict:
                 if "RMS level" in line:
                     return float(line.split(":")[-1].strip())
         except FileNotFoundError:
-            raise SunoError("ffmpeg no está instalado.") from None
+            raise SunoError("ffmpeg isn't installed.") from None
         except Exception:  # noqa: BLE001
             return None
         return None
@@ -216,8 +216,8 @@ def band_energy(path: str | os.PathLike, split_hz: int = 250) -> dict:
     if low is not None and high is not None:
         d = low - high
         verdict = (
-            f"dominancia grave de {d:.1f} dB" if d > 0
-            else f"dominancia aguda de {-d:.1f} dB"
+            f"low-end dominance of {d:.1f} dB" if d > 0
+            else f"high-end dominance of {-d:.1f} dB"
         )
     return {
         "file": p.name,

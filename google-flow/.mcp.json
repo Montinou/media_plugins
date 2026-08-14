@@ -6,7 +6,7 @@
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
       ],
-      "note": "Servidor local sin dependencias de pip: JSON-RPC sobre stdio con la stdlib. Necesita playwright, requests y pillow en el python3 del sistema, Google Chrome instalado, y las cookies de labs.google en ~/.config/google-flow/labs.google.cookies.json (o FLOW_COOKIES). El core no depende de ningún proyecto: lo específico va en packs/."
+      "note": "Local server with no pip dependencies: JSON-RPC over stdio with the stdlib. Needs playwright, requests, and pillow in the system python3, Google Chrome installed, and the labs.google cookies at ~/.config/google-flow/labs.google.cookies.json (or FLOW_COOKIES). The core doesn't depend on any project: project-specific stuff goes in packs/."
     }
   }
 }

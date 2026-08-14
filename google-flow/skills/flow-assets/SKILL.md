@@ -3,104 +3,106 @@ name: flow-assets
 description: Use when generating assets with Google Labs Flow — sprites, character turnarounds, map layers, dioramas — or when working with Flow applets, recipes, packs, appletId, projectId, or labs.google tools
 ---
 
-# Generar assets con Google Labs Flow
+# Generating assets with Google Labs Flow
 
-Google Labs Flow no tiene API pública. El acceso se apoya en la sesión del
-navegador del usuario, y las herramientas ("applets") se ejecutan conduciendo
-la app real, no replicando su protocolo.
+Google Labs Flow has no public API. Access relies on the user's browser
+session, and the tools ("applets") are run by driving the real app, not by
+replicating its protocol.
 
-Las tools `flow_*` del MCP `google-flow` cubren todo el ciclo. Este documento
-es para decidir **cuál usar y en qué orden**, y para las tres reglas que no se
-negocian.
+The `google-flow` MCP's `flow_*` tools cover the whole cycle. This document
+is for deciding **which one to use and in what order**, and for the three
+non-negotiable rules.
 
-## Reglas que no se negocian
+## Non-negotiable rules
 
-**1. Dryrun antes de cualquier batch nuevo.** `flow_dryrun_recipe` aplica todos
-los controles sin generar. Una receta con un label mal escrito falla en la
-variante 14 de 28 si no se verifica antes.
+**1. Dryrun before any new batch.** `flow_dryrun_recipe` applies all the
+controls without generating. A recipe with a misspelled label fails on
+variant 14 of 28 if it isn't verified first.
 
-**2. No acelerar ni paralelizar.** Las pausas de `flow_driver.py` (`PACE_MS`,
-`PACE_RUN_S`) están puestas a propósito. Google Labs no publica límites de uso,
-y una cuenta marcada como automatizada se pierde con todo el trabajo que
-dependía de ella. Nunca correr dos batches en paralelo ni bajar las pausas.
+**2. Don't speed up or parallelize.** The pauses in `flow_driver.py`
+(`PACE_MS`, `PACE_RUN_S`) are set deliberately. Google Labs doesn't publish
+usage limits, and an account flagged as automated gets lost along with all
+the work that depended on it. Never run two batches in parallel or lower the
+pauses.
 
-**3. No evadir la detección de automatización.** Si una ruta responde 403
-`PUBLIC_ERROR_UNUSUAL_ACTIVITY`, la respuesta es usar un Chrome real vía
-`cdp_url`, no falsear `navigator.webdriver` ni parchear el fingerprint. Evadir
-la detección es exactamente lo que provoca el bloqueo que se quiere evitar.
+**3. Don't evade automation detection.** If a route responds with 403
+`PUBLIC_ERROR_UNUSUAL_ACTIVITY`, the answer is to use a real Chrome via
+`cdp_url`, not to fake `navigator.webdriver` or patch the fingerprint.
+Evading detection is exactly what triggers the block you're trying to avoid.
 
-| Racionalización | Realidad |
+| Rationalization | Reality |
 |---|---|
-| "Son sólo 3 variantes, salteo el dryrun" | El dryrun tarda un minuto; una tanda fallida desperdicia diez. |
-| "Bajo la pausa a 5s para esta corrida sola" | El riesgo no es por corrida, es acumulado sobre la cuenta. |
-| "Dos batches en paralelo van más rápido" | Duplica la tasa de requests, que es justo lo que se mide. |
-| "Un patch de stealth y el upscale anda" | Convierte un 403 recuperable en una cuenta marcada. |
-| "El usuario tiene 234 créditos, gastar unos está bien" | Los créditos son suyos. Medir y reportar, no decidir por él. |
+| "It's only 3 variants, I'll skip the dryrun" | The dryrun takes a minute; a failed batch wastes ten. |
+| "I'll drop the pause to 5s just for this run" | The risk isn't per-run, it accumulates on the account. |
+| "Two batches in parallel go faster" | It doubles the request rate, which is exactly what gets measured. |
+| "One stealth patch and the upscale works" | It turns a recoverable 403 into a flagged account. |
+| "The user has 234 credits, spending a few is fine" | The credits are theirs. Measure and report, don't decide for them. |
 
-## Lo genérico y lo de cada cuenta
+## What's generic and what's per-account
 
-Las tools funcionan con cualquier cuenta. Lo que es propio de cada una
-—`projectId`, `appletId`, vocabularios de los dropdowns— vive en un **pack**.
+The tools work with any account. What's specific to each one —`projectId`,
+`appletId`, dropdown vocabularies— lives in a **pack**.
 
-Antes de nada, `flow_pack_info`: dice si hay pack activo y qué trae. Si no hay,
-`flow_scaffold_pack` genera uno leyendo la cuenta. Sin pack ni
-`FLOW_PROJECT_ID`, las tools que abren un applet fallan a propósito: el plugin
-no trae el proyecto de nadie hardcodeado.
+Before anything else, `flow_pack_info`: says whether there's an active pack
+and what it has. If there isn't one, `flow_scaffold_pack` generates one by
+reading the account. Without a pack or `FLOW_PROJECT_ID`, tools that open an
+applet fail on purpose: the plugin doesn't ship anyone's project hardcoded.
 
-## Flujo normal
-
-```
-flow_session_status        ¿la cookie sirve? ¿cuántos créditos hay?
-flow_pack_info             ¿qué herramientas y recetas hay disponibles?
-flow_dryrun_recipe         verificar la receta, costo cero
-flow_batch_generate        con limit 2-3 primero, después la tanda completa
-flow_upscale_local         nearest x2 para pixel art
-```
-
-Con un pack activo, las tools de generación aceptan `recipe_name` y no hace
-falta armar la receta a mano.
-
-Para una herramienta que no está en el pack:
+## Normal flow
 
 ```
-flow_list_applets          conseguir el appletId
-flow_get_applet_code       constants.ts trae los valores válidos de los dropdowns
-flow_inspect_controls      los labels y el texto exacto del botón de generar
+flow_session_status        does the cookie still work? how many credits are there?
+flow_pack_info             what tools and recipes are available?
+flow_dryrun_recipe         verify the recipe, zero cost
+flow_batch_generate        with limit 2-3 first, then the full batch
+flow_upscale_local         nearest x2 for pixel art
 ```
 
-Esos dos últimos son los que se saltean y los que causan los fallos: **los
-valores de dropdown salen de `constants.ts`, no de adivinar**, y los labels y el
-botón salen de `flow_inspect_controls`, no del código. El JSX de los applets
-varía demasiado para deducirlos con confianza.
+With an active pack, the generation tools accept `recipe_name` and there's
+no need to build the recipe by hand.
 
-## Costos
+For a tool that isn't in the pack:
 
-Medido comparando `/v1/credits` antes y después; cada corrida reporta el delta.
+```
+flow_list_applets          get the appletId
+flow_get_applet_code       constants.ts has the valid dropdown values
+flow_inspect_controls      the labels and the exact text of the generate button
+```
 
-- **Generar imágenes: 0 créditos.** Las rutas de generación ni siquiera validan
-  reCAPTCHA.
-- **Upscale nativo 2K/4K: cuesta**, y exige Chrome real.
+Those last two are the ones that get skipped and the ones that cause
+failures: **dropdown values come from `constants.ts`, not from guessing**,
+and the labels and the button come from `flow_inspect_controls`, not from
+the code. Applets' JSX varies too much to deduce them reliably.
 
-Si un `flow_generate` reporta un costo distinto de 0, decirlo explícitamente:
-significa que Flow cambió de política y el usuario necesita saberlo antes de
-lanzar un batch de 28.
+## Costs
 
-## Upscale: local casi siempre
+Measured by comparing `/v1/credits` before and after; every run reports the
+delta.
 
-Para pixel art, `flow_upscale_local` con `nearest` y factor entero es **mejor**
-que el 2K nativo, no un reemplazo pobre. El upscaler de Flow es generativo:
-interpola justo los bordes duros que el pixel art necesita. Nearest con factor
-entero es exacto y sin pérdida — una grilla de 1376x768 sale 2752x1536, por
-encima de 2K, gratis.
+- **Generating images: 0 credits.** The generation routes don't even
+  validate reCAPTCHA.
+- **Native 2K/4K upscale: costs**, and requires a real Chrome.
 
-El 2K nativo tiene sentido sólo para **arte pintado** (fondos, dioramas), donde
-la interpolación juega a favor. Ahí requiere `cdp_url` y consume créditos: pedir
-confirmación al usuario antes de llamarlo.
+If a `flow_generate` reports a cost other than 0, say so explicitly: it
+means Flow changed its policy and the user needs to know before launching a
+batch of 28.
 
-## Recetas
+## Upscale: local almost always
 
-Una receta describe cómo manejar los controles de un applet. Esquema completo,
-vocabularios de los applets de tu pack y el detalle de `matrix` en
+For pixel art, `flow_upscale_local` with `nearest` and an integer factor is
+**better** than native 2K, not a poor substitute. Flow's upscaler is
+generative: it interpolates exactly the sharp edges pixel art needs. Nearest
+with an integer factor is exact and lossless — a 1376x768 grid comes out
+2752x1536, above 2K, for free.
+
+Native 2K only makes sense for **painted art** (backgrounds, dioramas),
+where interpolation works in your favor. There it requires `cdp_url` and
+spends credits: ask the user for confirmation before calling it.
+
+## Recipes
+
+A recipe describes how to drive an applet's controls. Full schema, your
+pack's applet vocabularies, and the details of `matrix` are in
 `references/recipes.md`.
 
 ```json
@@ -116,27 +118,27 @@ vocabularios de los applets de tu pack y el detalle de `matrix` en
 }
 ```
 
-`matrix` sólo la usa `flow_batch_generate`: expande el producto cartesiano y
-saltea las variantes cuyo PNG ya existe, así que una tanda interrumpida se
-retoma volviéndola a llamar.
+`matrix` is only used by `flow_batch_generate`: it expands the cartesian
+product and skips variants whose PNG already exists, so an interrupted batch
+resumes by calling it again.
 
-## Cuando algo falla
+## When something fails
 
-| Síntoma | Causa | Qué hacer |
+| Symptom | Cause | What to do |
 |---|---|---|
-| Error de autenticación | cookie vencida | Pedir al usuario reexportar `labs.google.cookies.json` |
-| `no encontré la opción X` | valor que no está en `constants.ts` | Releer constants con `flow_get_applet_code` |
-| `no encontré un control con label X` | label sacado del código, no de la UI | Correr `flow_inspect_controls` |
-| 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | ruta con costo desde browser automatizado | Usar `cdp_url` con Chrome real |
-| El applet no montó | compila con esbuild.wasm en el browser | Subir `loadTimeoutMs`; suele tardar ~30s |
-| `no sé con qué proyecto trabajar` | sin pack ni `FLOW_PROJECT_ID` | `flow_scaffold_pack`, o definir la variable |
-| El botón de generar está deshabilitado | el applet necesita una imagen subida | No es automatizable todavía: falta el upload de referencias |
+| Auth error | expired cookie | Ask the user to re-export `labs.google.cookies.json` |
+| `couldn't find the option X` | value not in `constants.ts` | Reread constants with `flow_get_applet_code` |
+| `couldn't find a control with label X` | label taken from the code, not the UI | Run `flow_inspect_controls` |
+| 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | route with cost from an automated browser | Use `cdp_url` with a real Chrome |
+| The applet didn't mount | compiles with esbuild.wasm in the browser | Raise `loadTimeoutMs`; usually takes ~30s |
+| `don't know which project to work with` | no pack and no `FLOW_PROJECT_ID` | `flow_scaffold_pack`, or set the variable |
+| The generate button is disabled | the applet needs an uploaded image | Not automatable yet: reference upload is missing |
 
-## Referencias
+## References
 
-- `references/recipes.md` — esquema de recetas y cómo funciona `matrix`
-- `references/api-map.md` — endpoints, auth de dos saltos, qué protege reCAPTCHA
-- `packs/README.md` del plugin — qué es propio de cada cuenta y cómo generar un pack
+- `references/recipes.md` — recipe schema and how `matrix` works
+- `references/api-map.md` — endpoints, two-hop auth, what reCAPTCHA protects
+- the plugin's `packs/README.md` — what's specific to each account and how to generate a pack
 
-El catálogo de herramientas concretas no está acá: vive en el `applets.md` de
-cada pack, porque depende de la cuenta.
+The catalog of concrete tools isn't here: it lives in each pack's
+`applets.md`, because it depends on the account.

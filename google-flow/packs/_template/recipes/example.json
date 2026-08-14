@@ -1,0 +1,22 @@
+{
+  "name": "example",
+  "_appletId": "The tool's, from pack.json",
+  "appletId": "11111111-1111-1111-1111-111111111111",
+
+  "_generateButton": "Must match what the UI shows, verbatim and in its own language",
+  "generateButton": "GENERATE",
+
+  "_generateTimeoutSec": "How long to wait for the result. Large grids take a while.",
+  "generateTimeoutSec": 420,
+
+  "_controls": "Applied in order before generating. Labels and placeholders are matched against the real UI, so copy them exactly as they appear there.",
+  "controls": [
+    { "type": "dropdown", "label": "Style", "value": "Pixel art" },
+    { "type": "text", "placeholder": "Describe the scene", "value": "a forest at dusk" }
+  ],
+
+  "_matrix": "Optional, only for flow_batch_generate: cartesian product. Values here override the ones in controls with the same label.",
+  "matrix": {
+    "Style": ["Realistic", "Pixel art"]
+  }
+}

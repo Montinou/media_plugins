@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Verifica que el plugin tenga todo lo que necesita para funcionar.
+"""Checks that the plugin has everything it needs to work.
 
     python3 google-flow/doctor.py
 
-Revisa dependencias, Chrome, credenciales y el handshake del MCP, y explica qué
-hacer con cada cosa que falte. No genera nada ni gasta créditos.
+Checks dependencies, Chrome, credentials, and the MCP handshake, and explains
+what to do about anything missing. Generates nothing and spends no credits.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-OK, FAIL, WARN = "  ok  ", " falta", " aviso"
+OK, FAIL, WARN = "  ok  ", " fail ", " warn "
 problems: list[str] = []
 
 
@@ -36,13 +36,13 @@ def main() -> int:
     for mod, pkg in [("playwright", "playwright"), ("requests", "requests"), ("PIL", "pillow")]:
         try:
             __import__(mod)
-            check(f"módulo {mod}", True)
+            check(f"module {mod}", True)
         except ImportError:
             check(
-                f"módulo {mod}",
+                f"module {mod}",
                 False,
-                "no instalado",
-                f"pip install {pkg}  (si PEP 668 lo bloquea: pipx o un venv)",
+                "not installed",
+                f"pip install {pkg}  (if PEP 668 blocks it: pipx or a venv)",
             )
 
     chrome = Path("/Applications/Google Chrome.app")
@@ -50,7 +50,7 @@ def main() -> int:
         "Google Chrome",
         chrome.exists(),
         str(chrome) if chrome.exists() else "",
-        "instalar Chrome: el driver usa channel='chrome'",
+        "install Chrome: the driver uses channel='chrome'",
     )
 
     print()
@@ -58,43 +58,43 @@ def main() -> int:
     try:
         import flow_client
 
-        check("bibliotecas en lib/", True)
+        check("libraries in lib/", True)
     except Exception as e:
-        check("bibliotecas en lib/", False, str(e)[:80])
+        check("libraries in lib/", False, str(e)[:80])
         return _summary()
 
     cookies = flow_client.COOKIE_PATH
     if cookies.exists():
         mode = oct(cookies.stat().st_mode)[-3:]
-        check("cookies de labs.google", True, str(cookies))
+        check("labs.google cookies", True, str(cookies))
         check(
-            "permisos de las cookies",
+            "cookie file permissions",
             mode == "600",
-            f"modo {mode}",
+            f"mode {mode}",
             f"chmod 600 {cookies}",
             warn=True,
         )
     else:
         check(
-            "cookies de labs.google",
+            "labs.google cookies",
             False,
-            f"no están en {cookies}",
-            "exportar las cookies de labs.google desde el navegador a esa ruta",
+            f"not found at {cookies}",
+            "export the labs.google cookies from the browser to that path",
         )
         return _summary()
 
     try:
         info = flow_client.session_info()
         check(
-            "sesión de Flow",
+            "Flow session",
             bool(info.get("access_token")),
-            f"{info.get('user', {}).get('email')} · vence {info.get('expires')}",
-            "la cookie venció: reexportarla desde el navegador",
+            f"{info.get('user', {}).get('email')} · expires {info.get('expires')}",
+            "the cookie expired: re-export it from the browser",
         )
         credits = flow_client.sandbox("GET", "credits").get("credits")
-        check("créditos", True, f"{credits} disponibles")
+        check("credits", True, f"{credits} available")
     except Exception as e:
-        check("sesión de Flow", False, str(e)[:100], "reexportar las cookies")
+        check("Flow session", False, str(e)[:100], "re-export the cookies")
 
     print()
     handshake = [
@@ -126,10 +126,10 @@ def main() -> int:
         if msg.get("id") == 2:
             tools = msg.get("result", {}).get("tools", [])
     check(
-        "servidor MCP",
+        "MCP server",
         bool(tools),
         f"{len(tools)} tools" if tools else proc.stderr.strip()[-200:],
-        "revisar el error de arriba",
+        "check the error above",
     )
 
     return _summary()
@@ -138,9 +138,9 @@ def main() -> int:
 def _summary() -> int:
     print(f"\n{'-' * 60}")
     if problems:
-        print(f"{len(problems)} problema(s): {', '.join(problems)}")
+        print(f"{len(problems)} problem(s): {', '.join(problems)}")
         return 1
-    print("todo en orden")
+    print("everything's in order")
     return 0
 
 

@@ -1,51 +1,54 @@
 ---
-description: Verificar la sesión del servicio y guiar la renovación de credenciales
+description: Verify the service session and guide credential renewal
 ---
 
 # /example:auth
 
-Chequea la precondición de autenticación y, si no se cumple, guía al usuario
-para renovarla. No genera nada ni gasta créditos.
+Checks the auth precondition and, if it's not met, guides the user through
+renewing it. Generates nothing and spends no credits.
 
-## Pasos
+## Steps
 
-1. Llamá `example_auth_status`. Es local: no toca la red.
+1. Call `example_auth_status`. It's local: it doesn't touch the network.
 
-2. Interpretá y contale al usuario en unidades humanas (minutos, no segundos):
+2. Interpret the result and tell the user in human units (minutes, not
+   seconds):
 
-   - **válida** — informá a quién pertenece y cuánto le queda. Terminá ahí.
-   - **vencida pero renovable** — decilo y confirmalo con una tool que salga a
-     la red. Si funciona, está resuelto.
-   - **vencida y no renovable, o falta el archivo** — pasá al punto 3.
+   - **valid** — report who it belongs to and how much time is left. Stop
+     there.
+   - **expired but renewable** — say so and confirm it with a tool that hits
+     the network. If it works, it's resolved.
+   - **expired and not renewable, or the file is missing** — go to step 3.
 
-3. Pedí la renovación con instrucciones concretas:
+3. Ask for renewal with concrete instructions:
 
-   > Necesito que reexportes las cookies de `<servicio>`:
-   > 1. Abrí `<url>` en Chrome y confirmá que estás logueado.
-   > 2. Exportá las cookies del dominio a JSON (extensión tipo *Cookie-Editor*).
-   > 3. Guardalo en `~/.config/<servicio>/cookies.json`.
+   > I need you to re-export the `<service>` cookies:
+   > 1. Open `<url>` in Chrome and confirm you're logged in.
+   > 2. Export the domain's cookies to JSON (an extension like
+   >    *Cookie-Editor*).
+   > 3. Save it to `~/.config/<service>/cookies.json`.
    >
-   > Avisame cuando esté y sigo.
+   > Let me know when it's done and I'll continue.
 
-4. Cuando confirme, volvé a verificar de punta a punta.
+4. Once confirmed, verify end-to-end again.
 
-5. Higiene, una sola vez tras cada renovación:
-
-   ```bash
-   chmod 600 ~/.config/<servicio>/cookies.json
-   ```
-
-   Si el archivo quedó dentro de un repo, verificá que esté ignorado:
+5. Hygiene, once after every renewal:
 
    ```bash
-   git check-ignore -v <ruta>
+   chmod 600 ~/.config/<service>/cookies.json
    ```
 
-   Si no lo está, **avisá fuerte**: hay una sesión completa a punto de entrar al
-   control de versiones.
+   If the file ended up inside a repo, verify it's ignored:
 
-## Qué no hacer
+   ```bash
+   git check-ignore -v <path>
+   ```
 
-- No reintentes las tools mientras la sesión esté vencida.
-- No le pidas al usuario que pegue el token ni el contenido del archivo en el chat.
-- No intentes loguearte vos ni completar formularios de login.
+   If it isn't, **raise a strong flag**: a full session is about to enter
+   version control.
+
+## What not to do
+
+- Do not retry the tools while the session is expired.
+- Do not ask the user to paste the token or the file's contents into the chat.
+- Do not try to log in yourself or fill out login forms.

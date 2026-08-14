@@ -1,15 +1,15 @@
-"""Cliente base para un servicio con sesión de navegador.
+"""Base client for a service with a browser session.
 
-Este archivo es el **core reusable**: no contiene ningún identificador de
-proyecto. Copialo, renombrá `SERVICE` y los endpoints, y ya tenés un cliente que
-respeta las reglas de la casa (ritmo pausado, credenciales fuera del repo,
-errores de auth accionables).
+This file is the **reusable core**: it contains no project-specific
+identifiers. Copy it, rename `SERVICE` and the endpoints, and you have a
+client that follows house rules (slow, paced requests, credentials outside
+the repo, actionable auth errors).
 
-Lo específico de tu proyecto —ids de applets, prompts, presets— NO va acá:
-va en `packs/<proyecto>/`. Ver `packs/README.md`.
+Anything specific to your project — applet ids, prompts, presets — does NOT
+go here: it goes in `packs/<project>/`. See `packs/README.md`.
 
-Sin dependencias fuera de la stdlib: el Python de Homebrew está bajo PEP 668 y
-no queremos forzar `--break-system-packages`.
+No dependencies outside the stdlib: Homebrew's Python is under PEP 668 and
+we don't want to force `--break-system-packages`.
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-# --- personalizá esto -------------------------------------------------------
-SERVICE = "example"                              # nombre corto del plugin
-BASE = "https://api.example.com"                 # base de la API
-COOKIE_FILENAME = "example.com.cookies.json"     # como lo exporta el navegador
-MIN_INTERVAL = 2.5                               # segundos entre requests
+# --- customize this ---------------------------------------------------------
+SERVICE = "example"                              # short plugin name
+BASE = "https://api.example.com"                 # API base URL
+COOKIE_FILENAME = "example.com.cookies.json"     # as exported by the browser
+MIN_INTERVAL = 2.5                               # seconds between requests
 # ---------------------------------------------------------------------------
 
 UA = (
@@ -36,35 +36,37 @@ UA = (
 
 
 class ServiceError(RuntimeError):
-    """Fallo operativo (HTTP, parseo, etc.)."""
+    """Operational failure (HTTP, parsing, etc.)."""
 
 
 class ServiceAuthError(ServiceError):
-    """La sesión no sirve. Siempre con un mensaje accionable: quien la reciba
-    debe pedirle al usuario que reexporte las cookies, no reintentar."""
+    """The session isn't usable. Always carries an actionable message:
+    whoever receives it should ask the user to re-export the cookies, not
+    retry."""
 
 
 def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
-    """Ubica el JSON de cookies sin asumir una estructura de repo.
+    """Locates the cookies JSON without assuming a repo structure.
 
-    Un path explícito es una afirmación sobre QUÉ cuenta usar: si no existe,
-    fallamos en vez de caer en silencio a otro archivo (usar la cuenta
-    equivocada en silencio es peor que un error).
+    An explicit path is a claim about WHICH account to use: if it doesn't
+    exist, we fail instead of silently falling back to another file
+    (silently using the wrong account is worse than an error).
     """
     env_var = f"{SERVICE.upper()}_COOKIES"
-    for source, value in (("argumento", explicit), (env_var, os.environ.get(env_var))):
+    for source, value in (("argument", explicit), (env_var, os.environ.get(env_var))):
         if value:
             p = Path(value).expanduser()
             if not p.is_file():
                 raise ServiceAuthError(
-                    f"El {source} apunta a {p}, que no existe. No busco en otro "
-                    "lado para no usar una cuenta distinta a la que pediste."
+                    f"The {source} points to {p}, which doesn't exist. I "
+                    "won't look elsewhere to avoid using a different "
+                    "account than the one you asked for."
                 )
             return p
 
     candidates: list[Path] = []
     cwd = Path.cwd().resolve()
-    for d in (cwd, *cwd.parents):          # el proyecto en el que se trabaja
+    for d in (cwd, *cwd.parents):          # the project being worked on
         candidates.append(d / COOKIE_FILENAME)
     candidates.append(Path.home() / ".config" / SERVICE / "cookies.json")
     candidates.append(Path.home() / ".config" / SERVICE / COOKIE_FILENAME)
@@ -73,9 +75,9 @@ def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
         if c.is_file():
             return c
     raise ServiceAuthError(
-        f"No encontré {COOKIE_FILENAME}. Exportá las cookies de {SERVICE} con la "
-        f"sesión iniciada a ~/.config/{SERVICE}/cookies.json, o apuntá "
-        f"{env_var} al archivo."
+        f"Couldn't find {COOKIE_FILENAME}. Export {SERVICE}'s cookies while "
+        f"logged in to ~/.config/{SERVICE}/cookies.json, or point "
+        f"{env_var} at the file."
     )
 
 
@@ -92,17 +94,17 @@ class Service:
             self._cookies = json.loads(self.cookies_path.read_text())
         except json.JSONDecodeError as e:
             raise ServiceAuthError(
-                f"{self.cookies_path} no es JSON válido ({e}). Reexportá las cookies."
+                f"{self.cookies_path} isn't valid JSON ({e}). Re-export the cookies."
             ) from e
 
     # ------------------------------------------------------------------ auth
 
     def auth_status(self) -> dict[str, Any]:
-        """Diagnóstico LOCAL, sin tocar la red.
+        """LOCAL diagnostic, without touching the network.
 
-        Adaptalo al esquema de tu servicio: si usa un JWT, decodificá el payload
-        y devolvé `expires_in_seconds`; si usa cookie opaca, al menos verificá
-        que las cookies de sesión estén presentes.
+        Adapt it to your service's schema: if it uses a JWT, decode the
+        payload and return `expires_in_seconds`; if it uses an opaque
+        cookie, at least verify the session cookies are present.
         """
         names = {c["name"] for c in self._cookies}
         session_cookies = {"session", "__session", "auth_token"} & names
@@ -113,11 +115,11 @@ class Service:
             "valid": bool(session_cookies),
         }
 
-    # ------------------------------------------------------------- transporte
+    # -------------------------------------------------------------- transport
 
     def _throttle(self) -> None:
-        """Ritmo pausado. No lo saques: es la diferencia entre una cuenta sana
-        y una marcada como automatizada."""
+        """Slow, paced requests. Don't remove this: it's the difference
+        between a healthy account and one flagged as automated."""
         delta = time.monotonic() - self._last_call
         if delta < self.min_interval:
             time.sleep(self.min_interval - delta)
@@ -146,13 +148,13 @@ class Service:
             detail = e.read()[:300].decode("utf-8", "replace")
             if e.code in (401, 403):
                 raise ServiceAuthError(
-                    f"{e.code} en {path}. La sesión puede haber vencido; "
-                    f"reexportá las cookies de {SERVICE}."
+                    f"{e.code} on {path}. The session may have expired; "
+                    f"re-export {SERVICE}'s cookies."
                 ) from e
             raise ServiceError(f"{method.upper()} {path} -> {e.code}: {detail}") from e
 
     def download(self, url: str, dest: str | os.PathLike) -> dict:
-        """Descarga espaciada. Nunca en paralelo."""
+        """Paced download. Never in parallel."""
         p = Path(dest).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
         self._throttle()

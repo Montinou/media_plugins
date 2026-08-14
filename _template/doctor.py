@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Verifica que el plugin tenga todo lo que necesita.
+"""Verifies the plugin has everything it needs.
 
     python3 _template/doctor.py
 
-Revisa python, credenciales y el handshake del MCP, y explica qué hacer con
-cada cosa que falte. No genera nada, no gasta créditos y no descarga nada.
+Checks python, credentials, and the MCP handshake, and explains what to do
+about anything missing. Generates nothing, spends no credits, and downloads
+nothing.
 
-Al adaptar el template, cambiá el nombre del título y agregá los chequeos de las
-dependencias reales de tu plugin (ffmpeg, Chrome, playwright, lo que use).
+When adapting the template, change the title name and add checks for your
+plugin's real dependencies (ffmpeg, Chrome, playwright, whatever it uses).
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-OK, FAIL, WARN = "  ok  ", " falta", " aviso"
+OK, FAIL, WARN = "  ok  ", " fail ", " warn "
 problems: list[str] = []
 
 
@@ -41,29 +42,29 @@ def main() -> int:
     try:
         from service import SERVICE, Service, ServiceAuthError, find_cookies
     except Exception as e:  # noqa: BLE001
-        check("importar lib/service.py", False, detail=str(e))
+        check("import lib/service.py", False, detail=str(e))
         return _summary()
-    check("importar lib/service.py", True)
+    check("import lib/service.py", True)
 
     try:
         path = find_cookies()
-        check("credenciales", True, detail=str(path))
+        check("credentials", True, detail=str(path))
         mode = oct(path.stat().st_mode)[-3:]
         check(
-            "permisos",
+            "permissions",
             mode == "600",
-            detail=f"modo {mode}",
-            fix=f"chmod 600 '{path}' — es una sesión completa.",
+            detail=f"mode {mode}",
+            fix=f"chmod 600 '{path}' — it's a full session.",
             warn=True,
         )
         st = Service().auth_status()
-        check("sesión", bool(st.get("valid")), fix="Reexportá las cookies.")
+        check("session", bool(st.get("valid")), fix="Re-export the cookies.")
     except ServiceAuthError as e:
         check(
-            "credenciales",
+            "credentials",
             False,
             detail=str(e).split(".")[0],
-            fix=f"Exportá las cookies de {SERVICE} a ~/.config/{SERVICE}/cookies.json",
+            fix=f"Export {SERVICE}'s cookies to ~/.config/{SERVICE}/cookies.json",
             warn=True,
         )
 
@@ -79,11 +80,11 @@ def main() -> int:
         )
         lines = [json.loads(x) for x in proc.stdout.splitlines() if x.strip()]
         tools = next((m["result"]["tools"] for m in lines if "tools" in m.get("result", {})), [])
-        check("handshake del MCP", bool(tools), detail=f"{len(tools)} tools")
+        check("MCP handshake", bool(tools), detail=f"{len(tools)} tools")
         for t in tools:
             print(f"            · {t['name']}")
     except Exception as e:  # noqa: BLE001
-        check("handshake del MCP", False, detail=str(e))
+        check("MCP handshake", False, detail=str(e))
 
     return _summary()
 
@@ -91,9 +92,9 @@ def main() -> int:
 def _summary() -> int:
     print(f"\n{'-' * 60}")
     if problems:
-        print(f"faltan {len(problems)}: {', '.join(problems)}")
+        print(f"{len(problems)} missing: {', '.join(problems)}")
         return 1
-    print("todo en orden")
+    print("all good")
     return 0
 
 

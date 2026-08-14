@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Servidor MCP para Suno.
+"""MCP server for Suno.
 
-JSON-RPC 2.0 sobre stdio con la stdlib nada más (PEP 668: no queremos forzar
-`--break-system-packages` en el Python del sistema).
+JSON-RPC 2.0 over stdio with just the stdlib (PEP 668: we don't want to force
+`--break-system-packages` on the system Python).
 
-**Ninguna tool de este server toca la red de Suno, y es deliberado.** Suno está
-detrás de Cloudflare, sus ToS prohíben el acceso automatizado, y el export de
-cookies del navegador no incluye `__client`, así que ni siquiera se podría
-renovar el token. Lo que Suno necesita se hace por navegador con la sesión del
-usuario; acá vive el diagnóstico local y la verificación de lo descargado.
+**No tool in this server touches Suno's network, and it's deliberate.** Suno
+sits behind Cloudflare, its ToS forbid automated access, and the browser's
+cookie export doesn't include `__client`, so the token couldn't even be
+renewed. Whatever Suno needs happens through the browser with the user's
+session; this is where local diagnostics and download verification live.
 """
 from __future__ import annotations
 
@@ -55,13 +55,14 @@ def tool(name: str, description: str, schema: dict, **annotations):
 
 @tool(
     "suno_auth_status",
-    "Estado de la sesión de Suno: handle, plan y cuánto le queda al token. Es "
-    "puramente local — lee el JSON de cookies y decodifica el JWT, sin tocar la "
-    "red. Usala antes de mandar al usuario a operar en el navegador, para saber "
-    "si va a encontrarse la sesión caída. También reporta si la sesión sería "
-    "renovable de forma programática (casi siempre no).",
-    {"properties": {"cookies_path": {"type": "string", "description": "Ruta al JSON de cookies. Opcional."}}},
-    title="Estado de sesión",
+    "Status of the Suno session: handle, plan, and how much time the token "
+    "has left. It's purely local — reads the cookies JSON and decodes the "
+    "JWT, without touching the network. Use it before sending the user to "
+    "operate in the browser, to know whether they'll find the session "
+    "expired. It also reports whether the session would be programmatically "
+    "renewable (almost always not).",
+    {"properties": {"cookies_path": {"type": "string", "description": "Path to the cookies JSON. Optional."}}},
+    title="Session status",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -69,26 +70,26 @@ def _auth_status(args: dict) -> dict:
     st = suno.auth_status(args.get("cookies_path"))
     if not st["valid"]:
         st["action"] = (
-            "La sesión venció. Pedile al usuario que reexporte las cookies de "
-            "suno.com, o simplemente que abra suno.com en Chrome (al navegar se "
-            "renueva sola del lado del navegador, que es donde vamos a operar)."
+            "The session expired. Ask the user to re-export cookies from "
+            "suno.com, or simply open suno.com in Chrome (navigating renews "
+            "it on the browser side, which is where we're going to operate)."
         )
     return st
 
 
 @tool(
     "suno_inspect_multitrack",
-    "Analiza un zip de 'Export → Multitrack' de Suno Studio SIN extraerlo: qué "
-    "tracks trae, cuánto pesa cada uno, si están alineados y qué stems faltan. "
-    "Es local y barato. Usala apenas termina una descarga, antes de decirle al "
-    "usuario que salió bien.",
+    "Analyzes a Suno Studio 'Export → Multitrack' zip WITHOUT extracting it: "
+    "what tracks it has, how big each one is, whether they're aligned, and "
+    "which stems are missing. Local and cheap. Use it right after a download "
+    "finishes, before telling the user it went well.",
     {
         "properties": {
-            "zip_path": {"type": "string", "description": "Ruta al .zip exportado."}
+            "zip_path": {"type": "string", "description": "Path to the exported .zip."}
         },
         "required": ["zip_path"],
     },
-    title="Inspeccionar multitrack",
+    title="Inspect multitrack",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -98,18 +99,18 @@ def _inspect(args: dict) -> dict:
 
 @tool(
     "suno_verify_stem",
-    "Mide la energía RMS por debajo y por encima de un corte (250 Hz por "
-    "defecto) de un archivo de audio, para verificar que un stem contenga lo que "
-    "su nombre promete: el bass debe dominar en graves, las voces en agudos. "
-    "Local, vía ffmpeg. Nunca reproduce audio.",
+    "Measures RMS energy below and above a cutoff (250 Hz by default) of an "
+    "audio file, to verify that a stem contains what its name promises: the "
+    "bass should dominate at low end, vocals at high end. Local, via ffmpeg. "
+    "Never plays audio.",
     {
         "properties": {
-            "path": {"type": "string", "description": "Ruta al archivo de audio."},
-            "split_hz": {"type": "integer", "description": "Frecuencia de corte. Default 250."},
+            "path": {"type": "string", "description": "Path to the audio file."},
+            "split_hz": {"type": "integer", "description": "Cutoff frequency. Default 250."},
         },
         "required": ["path"],
     },
-    title="Verificar stem",
+    title="Verify stem",
     readOnlyHint=True,
     openWorldHint=False,
 )
@@ -162,7 +163,7 @@ def handle(msg: dict) -> dict | None:
         if fn is None:
             return _text(
                 rid,
-                f"No existe la tool {name!r}. Disponibles: {', '.join(sorted(HANDLERS))}",
+                f"Tool {name!r} doesn't exist. Available: {', '.join(sorted(HANDLERS))}",
                 is_error=True,
             )
         try:
@@ -173,21 +174,21 @@ def handle(msg: dict) -> dict | None:
         except SunoAuthError as e:
             return _text(
                 rid,
-                f"AUTENTICACIÓN: {e}\n\n"
-                "En Suno no hay renovación programática. Pedile al usuario que "
-                "reexporte las cookies de suno.com, o que abra suno.com en "
-                "Chrome si vamos a operar por navegador.",
+                f"AUTHENTICATION: {e}\n\n"
+                "Suno has no programmatic renewal. Ask the user to "
+                "re-export cookies from suno.com, or to open suno.com in "
+                "Chrome if we're going to operate via browser.",
                 is_error=True,
             )
         except SunoError as e:
-            return _text(rid, f"Error de Suno: {e}", is_error=True)
+            return _text(rid, f"Suno error: {e}", is_error=True)
         except Exception as e:  # noqa: BLE001
             return _text(rid, f"{type(e).__name__}: {e}", is_error=True)
 
     return {
         "jsonrpc": "2.0",
         "id": rid,
-        "error": {"code": -32601, "message": f"Método no soportado: {method}"},
+        "error": {"code": -32601, "message": f"Unsupported method: {method}"},
     }
 
 

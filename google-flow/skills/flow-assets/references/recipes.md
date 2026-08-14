@@ -1,14 +1,14 @@
-# Recetas
+# Recipes
 
-Una receta es un objeto JSON que describe cómo manejar los controles de un
-applet de Flow. Es lo que reciben `flow_dryrun_recipe`, `flow_generate` y
-`flow_batch_generate`.
+A recipe is a JSON object that describes how to drive a Flow applet's
+controls. It's what `flow_dryrun_recipe`, `flow_generate`, and
+`flow_batch_generate` receive.
 
-## Esquema
+## Schema
 
 ```json
 {
-  "name": "mi-proyecto-8dir",
+  "name": "my-project-8dir",
   "appletId": "00000000-0000-0000-0000-000000000000",
   "generateButton": "FORJAR GRILLA 8 DIRECCIONES",
   "generateTimeoutSec": 420,
@@ -24,62 +24,63 @@ applet de Flow. Es lo que reciben `flow_dryrun_recipe`, `flow_generate` y
 }
 ```
 
-| Campo | Obligatorio | Nota |
+| Field | Required | Note |
 |---|---|---|
-| `appletId` | sí | UUID de `flow_list_applets` |
-| `generateButton` | sí | Subcadena del texto del botón, tal como aparece en la UI |
-| `controls` | no | Se aplican en orden antes de generar |
-| `matrix` | no | Sólo `flow_batch_generate`; producto cartesiano |
-| `name` | no | Base del nombre de archivo (en batch lo deriva de la combinación) |
-| `generateTimeoutSec` | no | Default 300. Las grillas de 8 direcciones tardan |
-| `loadTimeoutMs` | no | Default 90000. El applet compila en el browser |
+| `appletId` | yes | UUID from `flow_list_applets` |
+| `generateButton` | yes | Substring of the button text, as it appears in the UI |
+| `controls` | no | Applied in order before generating |
+| `matrix` | no | Only `flow_batch_generate`; cartesian product |
+| `name` | no | Base of the output filename (in batch it's derived from the combination) |
+| `generateTimeoutSec` | no | Default 300. 8-direction grids take a while |
+| `loadTimeoutMs` | no | Default 90000. The applet compiles in the browser |
 
-### Controles
+### Controls
 
-**`dropdown`** — `label` es el texto que precede al valor en el control;
-`value` debe coincidir **exacto** con una opción. Los valores válidos salen del
-`constants.ts` del applet (`flow_get_applet_code`), no de suponer.
+**`dropdown`** — `label` is the text preceding the value in the control;
+`value` must match an option **exactly**. Valid values come from the
+applet's `constants.ts` (`flow_get_applet_code`), not from guessing.
 
-**`text`** — `placeholder` es una subcadena del placeholder del campo, que
-alcanza para identificarlo.
+**`text`** — `placeholder` is a substring of the field's placeholder,
+enough to identify it.
 
 ### matrix
 
-Mapea labels de dropdown a listas de valores. `flow_batch_generate` genera el
-producto cartesiano: 7 facciones × 4 acciones = 28 imágenes. Los valores de la
-matriz **pisan** cualquier control fijo del mismo label, así que un control fijo
-y una entrada de matriz para el mismo dropdown no entran en conflicto.
+Maps dropdown labels to lists of values. `flow_batch_generate` generates the
+cartesian product: 7 factions × 4 actions = 28 images. Matrix values
+**override** any fixed control with the same label, so a fixed control and a
+matrix entry for the same dropdown don't conflict.
 
-Cada archivo se nombra con el slug de la combinación
-(`imperio-de-aethelria-en-guardia.png`). El batch saltea las variantes cuyo PNG
-ya existe: una tanda interrumpida se retoma volviéndola a llamar con la misma
-receta y el mismo `out_dir`.
+Each file is named with the combination's slug
+(`imperio-de-aethelria-en-guardia.png`). The batch skips variants whose PNG
+already exists: an interrupted batch resumes by calling it again with the
+same recipe and the same `out_dir`.
 
-## Por qué los labels se sacan de la UI
+## Why labels are taken from the UI
 
-Los controles se localizan por el `innerText` de los `<button>`, no por clases
-CSS. Un label mal copiado no falla con un error de red sino con un timeout de
-30s buscando un elemento que no existe.
+Controls are located by the `<button>`'s `innerText`, not by CSS classes. A
+mistyped label doesn't fail with a network error but with a 30s timeout
+looking for an element that doesn't exist.
 
-Ojo con las subcadenas: `"Acción"` está contenido en `"Fa`**`cción`**` /
-Linaje"`. El driver ancla el label al inicio del texto del control justamente
-por eso, pero si dos controles empiezan igual hay que usar el label completo.
+Watch out for substrings: `"Acción"` is contained in `"Fa`**`cción`**` /
+Linaje"`. That's exactly why the driver anchors the label to the start of
+the control's text, but if two controls start the same way you need to use
+the full label.
 
-## De dónde salen los vocabularios
+## Where the vocabularies come from
 
-Los valores válidos de cada dropdown los definió quien creó el applet, así que
-no están en este plugin: viven en el pack de cada cuenta.
+The valid values for each dropdown were defined by whoever built the
+applet, so they aren't in this plugin: they live in each account's pack.
 
-- `flow_pack_info` los devuelve para las herramientas registradas
-- `applets.md` de cada pack los lista en prosa
-- `flow_get_applet_code` trae el `constants.ts` de cualquier applet
+- `flow_pack_info` returns them for registered tools
+- each pack's `applets.md` lists them in prose
+- `flow_get_applet_code` fetches any applet's `constants.ts`
 
-Si un dropdown no aparece en el pack, `flow_inspect_controls` muestra su label
-y el valor seleccionado, que sirve de punto de partida.
+If a dropdown isn't in the pack, `flow_inspect_controls` shows its label and
+the selected value, which works as a starting point.
 
-## Verificar antes de gastar tiempo
+## Verify before spending time
 
 ```
-flow_dryrun_recipe   → aplica todo sin generar, costo cero
-flow_batch_generate con limit: 2  → validar el resultado antes de la tanda larga
+flow_dryrun_recipe   → applies everything without generating, zero cost
+flow_batch_generate with limit: 2  → validate the result before the long batch
 ```
