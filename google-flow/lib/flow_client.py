@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -28,19 +29,29 @@ from pathlib import Path
 
 import requests
 
-COOKIE_NAME = "labs.google.cookies.json"
-
+# Global fallback for credentials, when a project doesn't carry its own.
 CONFIG_DIR = Path(
     os.environ.get("FLOW_CONFIG_DIR", Path.home() / ".config" / "google-flow")
 )
+COOKIE_NAME = "labs.google.cookies.json"
+
+# Cookie exporters name their files differently — `labs.google.cookies.json`,
+# `labs_google_cookies.json`, `labs-google-cookies.json`. Rather than chase
+# each extension's convention, files are matched on their letters and digits
+# with every separator stripped, so all of those collapse to the same thing.
+COOKIE_TOKEN = "labsgoogle"
+
+
+def _looks_like_cookies(path: Path) -> bool:
+    return COOKIE_TOKEN in re.sub(r"[^a-z0-9]", "", path.name.lower())
 
 
 def _find_cookies() -> Path:
     """Locates the cookies file without assuming any repo layout.
 
     Order: the explicit variable, then the project being worked on (a
-    `cookies/` folder or the file itself, walking up from the cwd), and only
-    then the user config as a global fallback.
+    `cookies/` folder or the directory itself, walking up from the cwd), and
+    only then the user config as a global fallback.
 
     The project wins over `~/.config` on purpose: a stale file in the config
     directory silently shadowing the one you just re-exported into your
@@ -50,17 +61,25 @@ def _find_cookies() -> Path:
     if os.environ.get("FLOW_COOKIES"):
         return Path(os.environ["FLOW_COOKIES"]).expanduser()
 
-    candidates = []
     cwd = Path.cwd().resolve()
-    for d in [cwd, *cwd.parents]:
-        candidates.append(d / "cookies" / COOKIE_NAME)
-        candidates.append(d / COOKIE_NAME)
-    candidates.append(CONFIG_DIR / COOKIE_NAME)
+    for base in [cwd, *cwd.parents]:
+        for folder in (base / "cookies", base):
+            exact = folder / COOKIE_NAME
+            if exact.exists():
+                return exact
+            if folder.is_dir():
+                for candidate in sorted(folder.glob("*.json")):
+                    if _looks_like_cookies(candidate):
+                        return candidate
 
-    for c in candidates:
-        if c.exists():
-            return c
-    return CONFIG_DIR / COOKIE_NAME  # so the error names the canonical place
+    fallback = CONFIG_DIR / COOKIE_NAME
+    if fallback.exists():
+        return fallback
+    if CONFIG_DIR.is_dir():
+        for candidate in sorted(CONFIG_DIR.glob("*.json")):
+            if _looks_like_cookies(candidate):
+                return candidate
+    return fallback  # so the error names the canonical place
 
 
 COOKIE_PATH = _find_cookies()

@@ -68,6 +68,18 @@ class FlowMusicAuthError(FlowMusicError):
     """
 
 
+# Cookie exporters name their files differently — with dots, underscores or
+# dashes. Files are matched on their letters and digits with every separator
+# stripped, so every variant collapses to the same thing.
+COOKIE_TOKEN = "flowmusic"
+
+
+def _looks_like_cookies(path) -> bool:
+    import re as _re
+
+    return COOKIE_TOKEN in _re.sub(r"[^a-z0-9]", "", path.name.lower())
+
+
 def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
     """Locates the cookies JSON.
 
@@ -97,8 +109,12 @@ def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
     for d in (cwd, *cwd.parents):
         # A `cookies/` folder at the project root keeps credentials in one
         # place instead of loose next to the code.
-        candidates.append(d / "cookies" / COOKIE_FILENAME)
-        candidates.append(d / COOKIE_FILENAME)
+        for folder in (d / "cookies", d):
+            candidates.append(folder / COOKIE_FILENAME)
+            if folder.is_dir():
+                candidates.extend(
+                    f for f in sorted(folder.glob("*.json")) if _looks_like_cookies(f)
+                )
     candidates.append(Path.home() / ".config" / "flowmusic" / "cookies.json")
     candidates.append(Path.home() / ".flowmusic" / "cookies.json")
     candidates.append(Path.home() / ".flowmusic" / COOKIE_FILENAME)
