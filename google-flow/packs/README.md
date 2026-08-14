@@ -42,7 +42,7 @@ se saltea el descubrimiento.
 
 ```bash
 export FLOW_PACK=/ruta/a/mi-pack        # cualquier directorio
-export FLOW_PACK_NAME=aerthos           # o uno de packs/ del plugin
+export FLOW_PACK_NAME=_template         # o uno de packs/ del plugin
 ```
 
 Con el pack activo, `flow_pack_info` lo describe y las tools de generación
@@ -91,8 +91,13 @@ dropdown igual trae el valor seleccionado, que sirve como punto de partida.
 
 ## Packs incluidos
 
-| Pack | Cuenta | Herramientas |
-|---|---|---|
-| [`aerthos`](./aerthos) | proyecto de Aerthos | 7 — sprites, mapas, tokens |
+Sólo [`_template`](./_template), con placeholders.
 
-Sirve como ejemplo real de un pack generado y después ajustado a mano.
+**Este repo es público y no incluye packs reales, a propósito.** Un pack lleva
+los `appletId` y el `projectId` de una cuenta concreta: publicarlos revela qué
+herramientas privadas tiene esa persona. El tuyo va en
+`~/.config/google-flow/packs/<nombre>` y se activa con `FLOW_PACK`, que acepta
+cualquier ruta.
+
+Es la misma razón por la que ningún plugin público de referencia —`vercel`,
+`supabase`— trae ids de la cuenta de su autor.

@@ -28,21 +28,9 @@ import requests
 
 COOKIE_NAME = "labs.google.cookies.json"
 
-# El plugin se llamaba `aerthos-flow` antes de volverse genérico. Preferimos el
-# nombre nuevo, pero seguimos leyendo el viejo para no romper instalaciones que
-# ya tienen las cookies puestas.
-_CONFIG_CANDIDATES = [
-    Path.home() / ".config" / "google-flow",
-    Path.home() / ".config" / "aerthos-flow",
-]
-
-if _env := os.environ.get("FLOW_CONFIG_DIR"):
-    CONFIG_DIR = Path(_env)
-else:
-    CONFIG_DIR = next(
-        (d for d in _CONFIG_CANDIDATES if (d / COOKIE_NAME).is_file()),
-        _CONFIG_CANDIDATES[0],
-    )
+CONFIG_DIR = Path(
+    os.environ.get("FLOW_CONFIG_DIR", Path.home() / ".config" / "google-flow")
+)
 
 
 def _find_cookies() -> Path:

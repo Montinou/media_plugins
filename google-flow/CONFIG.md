@@ -59,27 +59,33 @@ export FLOW_OUT=./assets/generados
 
 Verificar con `python3 google-flow/doctor.py`.
 
-## Ids del pack `aerthos`
+## Los ids no viven en este repo
 
-Documentados en [`packs/aerthos/pack.json`](./packs/aerthos/pack.json) y, en
-prosa, en [`packs/aerthos/applets.md`](./packs/aerthos/applets.md).
+Este repo es público, así que **no lleva ningún `appletId` ni `projectId` real**.
+Los que aparecen en la documentación y en `packs/_template/` son placeholders
+(`00000000-…`, `11111111-…`).
 
-**Proyecto:** `11111111-1111-1111-1111-111111111111`
+Los tuyos van en un pack propio, fuera del control de versiones:
 
-| Herramienta | appletId | Botón |
-|---|---|---|
-| AERTHOS Sprite Forge | `00000000-0000-0000-0000-000000000000` | `FORJAR GRILLA 8 DIRECCIONES` |
-| Aerthos: Forja de Tokens | `00000000-0000-0000-0000-000000000000` | `FORJAR SPRITESHEET` |
-| Aerthos: Forja de Personajes | `00000000-0000-0000-0000-000000000000` | `Generar Turnaround` |
-| Aerthos: Cartógrafo de Reinos | `00000000-0000-0000-0000-000000000000` | `Generar Mapa` |
-| AERTHOS — Map Asset Layer Forge | `00000000-0000-0000-0000-000000000000` | `GENERAR CAPA DE ASSETS` ⚠ |
-| Remix of Map Asset Layer Forge | `00000000-0000-0000-0000-000000000000` | `GENERAR CAPA DE ASSETS` ⚠ |
-| Aerthos Map Compiler | `00000000-0000-0000-0000-000000000000` | `Generate Final Outputs` ⚠ |
+```bash
+mkdir -p ~/.config/google-flow/packs/mi-proyecto
+# escribí ahí pack.json con tu projectId y tus appletId
+export FLOW_PACK=~/.config/google-flow/packs/mi-proyecto
+```
 
-⚠ El botón arranca **deshabilitado**: esos applets necesitan una imagen subida
-antes de poder generar, y el upload de referencias todavía no está
-implementado. Hoy no son automatizables.
+Para descubrir los ids de tu cuenta, sin copiarlos a mano:
 
-Hay otro proyecto en la misma cuenta, `00000000-0000-0000-0000-000000000000`,
-que es al que entra Flow por defecto. Las herramientas de Aerthos están en el
-primero, así que el pack lo fija explícitamente.
+```bash
+python3 -c "import sys; sys.path.insert(0,'google-flow/lib'); import flow_client as f; \
+print('\n'.join(f\"{a['appletId']}  {a.get('title','')}\" for a in f.list_applets()))"
+```
+
+### Una advertencia que cuesta tiempo descubrir
+
+Varios applets tienen el botón de generar **deshabilitado** hasta que se sube
+una imagen de referencia, y el upload todavía no está implementado. Esos no son
+automatizables hoy: conviene marcarlos en tu `pack.json` para no perder tiempo.
+
+Y ojo con el proyecto: una cuenta puede tener varios, y Flow entra por defecto
+al que no siempre es el que tiene tus herramientas. Por eso el pack fija el
+`projectId` explícitamente.

@@ -100,7 +100,7 @@ confirmación al usuario antes de llamarlo.
 ## Recetas
 
 Una receta describe cómo manejar los controles de un applet. Esquema completo,
-vocabularios de los applets de Aerthos y el detalle de `matrix` en
+vocabularios de los applets de tu pack y el detalle de `matrix` en
 `references/recipes.md`.
 
 ```json

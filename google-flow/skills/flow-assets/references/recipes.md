@@ -8,7 +8,7 @@ applet de Flow. Es lo que reciben `flow_dryrun_recipe`, `flow_generate` y
 
 ```json
 {
-  "name": "aerthos-facciones-8dir",
+  "name": "mi-proyecto-8dir",
   "appletId": "00000000-0000-0000-0000-000000000000",
   "generateButton": "FORJAR GRILLA 8 DIRECCIONES",
   "generateTimeoutSec": 420,

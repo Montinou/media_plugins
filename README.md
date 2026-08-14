@@ -9,7 +9,7 @@ sólo tiene UI.
 
 | Plugin | Servicio | Qué resuelve |
 |---|---|---|
-| [`aerthos-flow`](./aerthos-flow) | [Google Labs Flow](https://labs.google/fx/tools/flow) | generar assets en batch conduciendo los applets, y upscalear |
+| [`google-flow`](./google-flow) | [Google Labs Flow](https://labs.google/fx/tools/flow) | generar assets en batch conduciendo los applets, y upscalear |
 | [`flow-music`](./flow-music) | [Flow Music](https://www.flowmusic.app) | catálogo, créditos y descarga de stems **incluido el bass** |
 | [`suno`](./suno) | [Suno](https://suno.com) | Studio 2.0, export multitrack en WAV y verificación local |
 
@@ -17,7 +17,7 @@ sólo tiene UI.
 
 ```
 /plugin marketplace add Montinou/media_plugins
-/plugin install aerthos-flow@media-plugins
+/plugin install google-flow@media-plugins
 /plugin install flow-music@media-plugins
 /plugin install suno@media-plugins
 ```
@@ -25,6 +25,7 @@ sólo tiene UI.
 Cada plugin trae un `doctor.py` que verifica su instalación sin gastar nada:
 
 ```bash
+python3 google-flow/doctor.py
 python3 flow-music/doctor.py
 python3 suno/doctor.py
 ```
@@ -50,14 +51,25 @@ el SDK obligaría a `--break-system-packages` sobre el intérprete del sistema.
 ## Credenciales
 
 Cada plugin busca sus cookies en `~/.config/<plugin>/`, y ninguna credencial
-vive en este repo. Para `aerthos-flow`:
+vive en este repo:
+
+| Plugin | Archivo |
+|---|---|
+| `google-flow` | `~/.config/google-flow/labs.google.cookies.json` |
+| `flow-music` | `~/.config/flowmusic/cookies.json` |
+| `suno` | `~/.config/suno/cookies.json` |
 
 ```bash
-mkdir -p ~/.config/aerthos-flow
-# exportar las cookies de labs.google desde el navegador a:
-#   ~/.config/aerthos-flow/labs.google.cookies.json
-chmod 600 ~/.config/aerthos-flow/labs.google.cookies.json
+mkdir -p ~/.config/google-flow
+# exportar las cookies del servicio desde el navegador al archivo de arriba
+chmod 600 ~/.config/google-flow/labs.google.cookies.json
 ```
+
+Los plugins también aceptan el JSON en la raíz del proyecto en el que estés
+trabajando, o en una ruta explícita por variable de entorno
+(`FLOW_COOKIES`, `FLOWMUSIC_COOKIES`, `SUNO_COOKIES`). Si esa variable apunta a
+un archivo que no existe, **fallan en vez de buscar en otro lado**: usar la
+cuenta equivocada en silencio es peor que un error.
 
 Las cookies de sesión son equivalentes a estar logueado en la cuenta. El
 `.gitignore` cubre los patrones habituales, pero la regla real es que no entren

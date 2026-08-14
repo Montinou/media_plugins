@@ -152,7 +152,7 @@ def _session_status(args: dict) -> dict:
             "filter": {
                 "type": "string",
                 "description": "Subcadena para filtrar por nombre o descripción, "
-                "sin distinguir mayúsculas. Ej: 'aerthos'.",
+                "sin distinguir mayúsculas. Ej: 'sprite'.",
             },
             "mine_only": {
                 "type": "boolean",
