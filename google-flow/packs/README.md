@@ -82,9 +82,11 @@ deduce them reliably. Still, it's worth reviewing what it generates.
 
 Two things you'll want to check:
 
-**Disabled actions.** If `disabledActions` includes the generate button,
-that applet needs a prior input — typically an uploaded image — and isn't
-automatable today, because reference upload isn't implemented yet.
+**Disabled actions.** If `disabledActions` includes the generate button, that
+applet wants a source image first. It's still reachable: the button that
+provides one is always enabled and calls `Flow.media.select`, which opens the
+project gallery — even when it's labelled `Upload …`. Driving that picker is UI
+work, not protocol work.
 
 **Empty vocabularies.** If an applet doesn't declare its options in
 `constants.ts` but inline in the JSX, `vocabulary` comes up short. Each

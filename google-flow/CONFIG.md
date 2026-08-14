@@ -82,10 +82,18 @@ print('\n'.join(f\"{a['appletId']}  {a.get('title','')}\" for a in f.list_applet
 
 ### A warning that takes time to discover
 
-Several applets have the generate button **disabled** until a reference
-image is uploaded, and the upload isn't implemented yet. Those aren't
-automatable today: it's worth flagging them in your `pack.json` so you don't
-waste time.
+Several applets open with the generate button **disabled**: they want a source
+image. That does not make them unreachable — the requirement is met by
+**picking an image from the project gallery**, and the button that does it is
+always enabled even when it reads `Upload Source Map`, because it calls
+`Flow.media.select`, not a file picker.
+
+Driving that picker is UI work like any other control. The `Flow.upload` path,
+for a local file, is the one that would need protocol work — and it isn't
+needed. Description fields are optional: generation proceeds without them.
+
+Worth flagging disabled actions in your `pack.json` anyway, so you know which
+tools need a gallery pick before they run.
 
 And watch out for the project: an account can have several, and Flow
 defaults to one that isn't always the one with your tools. That's why the
