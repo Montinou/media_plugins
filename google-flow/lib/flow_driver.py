@@ -57,6 +57,23 @@ POLL_RESULT_S = 4      # how often to check whether the image is out yet
 
 
 
+# Flow serves every image as JPEG, from generation through its CDN. Naming the
+# file .png would be a lie, and a costly one: chroma-key work assumes flat
+# exact colors, and JPEG leaves none — measured on a magenta background, exact
+# #FF00FF fell to 0.01% of pixels and the image carried 65k distinct colors.
+# Cutouts have to work by tolerance, not by exact match.
+EXT_BY_MIME = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+}
+
+
+def ext_for(mime: str) -> str:
+    return EXT_BY_MIME.get((mime or "").lower(), "png")
+
+
 def applet_url(applet_id: str, project_id: str | None = None) -> str:
     import flow_packs
 
@@ -456,7 +473,7 @@ def run_recipe(recipe: dict, out_dir: Path, headless: bool) -> dict:
         print(f"→ credits after: {after_gen}  (generation cost: {cost})")
 
         stem = recipe.get("name", "flow-output")
-        raw = out_dir / f"{stem}.png"
+        raw = out_dir / f"{stem}.{ext_for(result['mimeType'])}"
         raw.write_bytes(base64.b64decode(result["base64"]))
         print(f"→ saved {raw}")
 
@@ -546,8 +563,17 @@ def run_batch(
 
         for i, variant in enumerate(variants, 1):
             name = variant["name"]
-            dest = out_dir / f"{name}.png"
-            if dest.exists():
+            # The extension isn't known until the result comes back, so the
+            # resume check looks for the name under any of them.
+            already = next(
+                (
+                    out_dir / f"{name}.{e}"
+                    for e in EXT_BY_MIME.values()
+                    if (out_dir / f"{name}.{e}").exists()
+                ),
+                None,
+            )
+            if already:
                 print(f"[{i}/{len(variants)}] {name}: already exists, skipping")
                 continue
 
@@ -560,6 +586,7 @@ def run_batch(
                     timeout=recipe.get("generateTimeoutSec", 300),
                     ignore_key=previous,
                 )
+                dest = out_dir / f"{name}.{ext_for(res['mimeType'])}"
                 dest.write_bytes(base64.b64decode(res["base64"]))
                 entry = {
                     "name": name,
@@ -568,6 +595,7 @@ def run_batch(
                     "width": res["width"],
                     "height": res["height"],
                     "mediaId": res["mediaId"],
+                    "mimeType": res["mimeType"],
                 }
                 results.append(entry)
                 print(f"    ok {res['width']}x{res['height']} -> {dest.name}")
