@@ -7,9 +7,13 @@ are mandatory except the credentials; the rest have reasonable defaults.
 
 | Variable | Default | What for |
 |---|---|---|
-| `FLOW_COOKIES` | looks for `labs.google.cookies.json` in `FLOW_CONFIG_DIR` and upward from the cwd | labs.google cookies file |
+| `FLOW_COOKIES` | walks up from the cwd looking for `cookies/labs.google.cookies.json`, then the bare file, and falls back to `FLOW_CONFIG_DIR` | labs.google cookies file |
 | `FLOW_CONFIG_DIR` | `~/.config/google-flow` | Where credentials live |
 | `FLOW_TOKEN_CACHE` | `$FLOW_CONFIG_DIR/.flow-token.json` | Cache for the bearer derived from the cookie |
+
+A project's `cookies/` folder **wins over `~/.config`**. A stale file in the
+config directory shadowing the one you just re-exported is a confusing failure:
+the symptom is a 401 that looks like an expired session even after refreshing.
 
 The session cookie lasts months; the bearer, hours. The bearer re-derives
 itself, so you only need to re-export cookies once the session fully expires.
@@ -47,9 +51,14 @@ working on.
 ## Example
 
 ```bash
-# once
+# per project — preferred: the credentials sit next to the work
+mkdir -p cookies
+# export labs.google cookies to cookies/labs.google.cookies.json
+chmod 600 cookies/labs.google.cookies.json
+# and make sure cookies/ is gitignored
+
+# or globally, as a fallback for every project
 mkdir -p ~/.config/google-flow
-# export labs.google cookies to ~/.config/google-flow/labs.google.cookies.json
 chmod 600 ~/.config/google-flow/labs.google.cookies.json
 
 # per project

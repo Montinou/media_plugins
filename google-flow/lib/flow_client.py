@@ -36,21 +36,31 @@ CONFIG_DIR = Path(
 
 
 def _find_cookies() -> Path:
-    """Locates the cookies file without assuming a repo structure.
+    """Locates the cookies file without assuming any repo layout.
 
-    Order: environment variable, the user's config directory, and the cwd
-    walking up toward the root — this works both when installed and inside
-    a project that keeps its cookies at the root.
+    Order: the explicit variable, then the project being worked on (a
+    `cookies/` folder or the file itself, walking up from the cwd), and only
+    then the user config as a global fallback.
+
+    The project wins over `~/.config` on purpose: a stale file in the config
+    directory silently shadowing the one you just re-exported into your
+    sandbox is a confusing failure — the symptom is a 401 that looks like an
+    expired session even after refreshing the cookies.
     """
     if os.environ.get("FLOW_COOKIES"):
-        return Path(os.environ["FLOW_COOKIES"])
-    candidates = [CONFIG_DIR / COOKIE_NAME]
+        return Path(os.environ["FLOW_COOKIES"]).expanduser()
+
+    candidates = []
     cwd = Path.cwd().resolve()
-    candidates += [d / COOKIE_NAME for d in [cwd, *cwd.parents]]
+    for d in [cwd, *cwd.parents]:
+        candidates.append(d / "cookies" / COOKIE_NAME)
+        candidates.append(d / COOKIE_NAME)
+    candidates.append(CONFIG_DIR / COOKIE_NAME)
+
     for c in candidates:
         if c.exists():
             return c
-    return CONFIG_DIR / COOKIE_NAME  # so the error message names the canonical spot
+    return CONFIG_DIR / COOKIE_NAME  # so the error names the canonical place
 
 
 COOKIE_PATH = _find_cookies()

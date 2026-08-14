@@ -95,6 +95,9 @@ def find_cookies(explicit: str | os.PathLike | None = None) -> Path:
     candidates: list[Path] = []
     cwd = Path.cwd().resolve()
     for d in (cwd, *cwd.parents):
+        # A `cookies/` folder at the project root keeps credentials in one
+        # place instead of loose next to the code.
+        candidates.append(d / "cookies" / COOKIE_FILENAME)
         candidates.append(d / COOKIE_FILENAME)
     candidates.append(Path.home() / ".config" / "flowmusic" / "cookies.json")
     candidates.append(Path.home() / ".flowmusic" / "cookies.json")
