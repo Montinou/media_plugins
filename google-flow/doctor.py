@@ -85,16 +85,18 @@ def main() -> int:
 
     try:
         info = flow_client.session_info()
-        check(
-            "Flow session",
-            bool(info.get("access_token")),
-            f"{info.get('user', {}).get('email')} · expires {info.get('expires')}",
-            "the cookie expired: re-export it from the browser",
-        )
+        user = info.get("user", {}).get("email")
+        # session_info() no valida el vencimiento; access_token() sí, y es lo
+        # que usan todas las tools. Se chequea acá para que el doctor falle en
+        # el mismo lugar donde fallaría el trabajo real.
+        flow_client.access_token(force_refresh=True)
+        check("Flow session", True, f"{user} · expires {info.get('expires')}")
         credits = flow_client.sandbox("GET", "credits").get("credits")
         check("credits", True, f"{credits} available")
+    except flow_client.FlowAuthError as e:
+        check("Flow session", False, str(e)[:110], "re-export the cookies")
     except Exception as e:
-        check("Flow session", False, str(e)[:100], "re-export the cookies")
+        check("Flow session", False, str(e)[:110], "re-export the cookies")
 
     print()
     handshake = [

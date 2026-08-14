@@ -23,6 +23,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -130,6 +131,22 @@ def _fetch_access_token() -> tuple[str, float]:
     )
     r.raise_for_status()
     data = r.json()
+    # `expires` is the NextAuth session deadline. Past it, the endpoint still
+    # returns an access_token — an expired one — so without this check the
+    # failure surfaces later as an opaque 401 from googleapis that says nothing
+    # about what to do.
+    expires = data.get("expires")
+    if expires:
+        try:
+            exp = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+            if exp < datetime.now(timezone.utc):
+                raise FlowAuthError(
+                    f"the Flow session expired on {expires}. Re-export the "
+                    f"labs.google cookies from the browser to {COOKIE_PATH}."
+                )
+        except ValueError:
+            pass  # unexpected format: let it through and fail later if it fails
+
     token = data.get("access_token")
     if not token:
         raise FlowAuthError(
