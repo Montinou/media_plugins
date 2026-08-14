@@ -237,6 +237,55 @@ class FlowDriver:
     def click(self, button_text: str) -> None:
         self.frame.get_by_role("button").filter(has_text=button_text).first.click()
 
+    # ---------------------------------------------------------------- gallery
+
+    def pick_from_gallery(
+        self,
+        button_text: str,
+        pick: str | None = None,
+        search: str | None = None,
+        timeout: float = 30.0,
+    ) -> str:
+        """Picks an image from the project gallery for an applet that wants one.
+
+        Several applets open with the generate button disabled because they
+        expect a source image. The button that provides it calls
+        `Flow.media.select`, so the picker renders in the parent frame — not in
+        the applet's iframe — and has to be driven there.
+
+        `pick` is a substring of the item's title; without it, the already
+        selected one is taken, which is the most recent.
+        """
+        self.frame.get_by_role("button").filter(
+            has_text=re.compile(re.escape(button_text), re.I)
+        ).first.click()
+
+        dialog = self.page.locator("[role=dialog]").last
+        dialog.wait_for(state="visible", timeout=int(timeout * 1000))
+        self.page.wait_for_timeout(PACE_MS)
+
+        if search:
+            box = dialog.get_by_placeholder(re.compile("buscar|search", re.I)).first
+            box.fill(search)
+            self.page.wait_for_timeout(2000)
+
+        chosen = "(the preselected one)"
+        if pick:
+            item = dialog.get_by_text(re.compile(re.escape(pick), re.I)).first
+            item.wait_for(state="visible", timeout=10000)
+            chosen = (item.inner_text() or pick).strip()
+            item.click()
+            self.page.wait_for_timeout(PACE_MS)
+
+        # The confirm button's label follows the account's language.
+        confirm = dialog.get_by_role(
+            "button", name=re.compile("añadir|agregar|add media|add", re.I)
+        ).last
+        confirm.click()
+        dialog.wait_for(state="hidden", timeout=int(timeout * 1000))
+        self.page.wait_for_timeout(PACE_MS)
+        return chosen
+
     # ---------------------------------------------------------------- result
 
     def current_image_key(self) -> str | None:
@@ -353,6 +402,12 @@ def apply_controls(drv: "FlowDriver", recipe: dict) -> None:
         elif kind == "text":
             print(f"   text {step['placeholder']!r}")
             drv.fill(step["placeholder"], step["value"])
+        elif kind == "gallery":
+            print(f"   gallery via {step['button']!r}")
+            chosen = drv.pick_from_gallery(
+                step["button"], step.get("pick"), step.get("search")
+            )
+            print(f"      picked: {chosen}")
         else:
             raise ValueError(f"unknown control type: {kind}")
         drv.frame.wait_for_timeout(PACE_MS)
