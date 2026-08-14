@@ -65,3 +65,17 @@ Weight: ~421 MB for a 3-minute track. You need to wait, not retry.
 - **Never** solve a CAPTCHA or Cloudflare challenge.
 - **Never** publish a song without an explicit request (Suno's feed is public).
 - Confirm anything that consumes credits or modifies the account.
+
+## Command-line usage
+
+`lib/suno.py` is also a CLI. Like the MCP tools, none of it touches Suno's
+network — it only reads local files:
+
+```bash
+python3 suno/lib/suno.py status                          # session, from the cookies JSON
+python3 suno/lib/suno.py inspect ~/Downloads/project.zip  # multitrack export
+python3 suno/lib/suno.py verify "4 Bass.wav"             # RMS per band
+```
+
+Everything prints JSON. Exit code 2 means the session needs renewing, 1 is any
+other failure.

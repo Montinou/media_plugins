@@ -226,3 +226,54 @@ def band_energy(path: str | os.PathLike, split_hz: int = 250) -> dict:
         "rms_above_db": high,
         "verdict": verdict,
     }
+
+
+# --------------------------------------------------------------------------- CLI
+
+
+def main() -> int:
+    """Same capabilities as the MCP tools, from a terminal.
+
+    Everything here is local: this module never talks to Suno.
+    """
+    import argparse
+    import sys
+
+    p = argparse.ArgumentParser(prog="suno", description="Suno local utilities")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    st = sub.add_parser("status", help="session state — local, no network")
+    st.add_argument("-c", "--cookies", help="path to the cookies JSON")
+
+    ins = sub.add_parser(
+        "inspect", help="analyze an 'Export -> Multitrack' zip without extracting it"
+    )
+    ins.add_argument("zip_path")
+
+    ver = sub.add_parser(
+        "verify", help="RMS per band, to confirm a stem is what its name claims"
+    )
+    ver.add_argument("path")
+    ver.add_argument("--split-hz", type=int, default=250)
+
+    a = p.parse_args()
+
+    try:
+        if a.cmd == "status":
+            out = auth_status(a.cookies)
+        elif a.cmd == "inspect":
+            out = inspect_multitrack(a.zip_path)
+        elif a.cmd == "verify":
+            out = band_energy(a.path, a.split_hz)
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return 0
+    except SunoAuthError as e:
+        print(f"authentication: {e}", file=sys.stderr)
+        return 2
+    except SunoError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -395,3 +395,88 @@ class FlowMusic:
         dest = out / f"{clip.get('title') or clip_id}{'.wav' if url.endswith('.wav') else '.m4a'}"
         dest.write_bytes(self._raw_get(url))
         return {"title": clip.get("title"), "path": str(dest), "bytes": dest.stat().st_size}
+
+
+# --------------------------------------------------------------------------- CLI
+
+
+def main() -> int:
+    """Same capabilities as the MCP tools, from a terminal.
+
+    Useful outside an agent: scripts, cron, or just checking something fast.
+    """
+    import argparse
+
+    p = argparse.ArgumentParser(
+        prog="flowmusic", description="Google Flow Music client"
+    )
+    p.add_argument("-c", "--cookies", help="path to the cookies JSON")
+    p.add_argument(
+        "--min-interval",
+        type=float,
+        default=float(os.environ.get("FLOWMUSIC_MIN_INTERVAL", "2.5")),
+        help="seconds between requests (default 2.5; do not lower it)",
+    )
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("status", help="session state — local, no network")
+    sub.add_parser("account", help="user and credit balance")
+
+    ls = sub.add_parser("songs", help="list your songs")
+    ls.add_argument("-n", "--limit", type=int, default=20)
+
+    sub.add_parser("stems", help="list the songs that already have stems")
+
+    urls = sub.add_parser("urls", help="stem download URLs, without downloading")
+    urls.add_argument("song", help="source_clip_id or part of the title")
+
+    get = sub.add_parser("get", help="download a song's stems, bass included")
+    get.add_argument("song", help="source_clip_id or part of the title")
+    get.add_argument("-o", "--outdir", default=".", help="destination (default: cwd)")
+
+    song = sub.add_parser("song", help="download the full mix")
+    song.add_argument("clip_id")
+    song.add_argument("-o", "--outdir", default=".")
+    song.add_argument("--no-wav", action="store_true", help="skip WAV, take the m4a")
+
+    a = p.parse_args()
+
+    try:
+        fm = FlowMusic(a.cookies, min_interval=a.min_interval)
+        if a.cmd == "status":
+            out = fm.auth_status()
+        elif a.cmd == "account":
+            out = {"user": fm.me(), "credits": fm.credits()}
+        elif a.cmd == "songs":
+            out = [
+                {"clip_id": c["id"], "title": c.get("title"), "op_type": c.get("op_type")}
+                for c in fm.clips()
+                if c.get("op_type") != "audio__split_stems"
+            ][: a.limit]
+        elif a.cmd == "stems":
+            out = [
+                {
+                    "source_clip_id": src,
+                    "title": i["title"],
+                    "stems": sorted(i["stems"], key=lambda s: STEM_ORDER.get(s, 9)),
+                }
+                for src, i in fm.songs_with_stems().items()
+            ]
+        elif a.cmd == "urls":
+            out = fm.stem_urls(a.song)
+        elif a.cmd == "get":
+            out = fm.download_stems(a.song, a.outdir)
+        elif a.cmd == "song":
+            out = fm.download_song(a.clip_id, a.outdir, wav=not a.no_wav)
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return 0
+    except FlowMusicAuthError as e:
+        print(f"authentication: {e}", file=__import__("sys").stderr)
+        return 2
+    except FlowMusicError as e:
+        print(f"error: {e}", file=__import__("sys").stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

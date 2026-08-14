@@ -55,3 +55,22 @@ flows.
 
 The client enforces 2.5 s between requests (`FLOWMUSIC_MIN_INTERVAL`). Do not
 lower it: no bursts, no fast retries, no parallel downloads.
+
+## Command-line usage
+
+`lib/flowmusic.py` is also a CLI, with the same capabilities as the MCP tools —
+handy for scripts, cron, or a quick check outside an agent:
+
+```bash
+python3 flow-music/lib/flowmusic.py status              # session, local, no network
+python3 flow-music/lib/flowmusic.py account             # user and credit balance
+python3 flow-music/lib/flowmusic.py songs -n 10
+python3 flow-music/lib/flowmusic.py stems               # songs that already have stems
+python3 flow-music/lib/flowmusic.py urls "Pocket Strut" # what would be downloaded
+python3 flow-music/lib/flowmusic.py get "Pocket Strut" -o ~/Music/stems
+python3 flow-music/lib/flowmusic.py song <clip_id> -o ~/Music
+```
+
+Everything prints JSON. Exit code 2 means the session needs renewing, 1 is any
+other failure. The pacing floor applies here too: `--min-interval` defaults to
+2.5 s.
