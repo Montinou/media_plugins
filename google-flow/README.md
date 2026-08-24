@@ -52,6 +52,7 @@ the SDK would force `--break-system-packages` on the system interpreter.
 | `flow_get_applet_code` | — | Source code and `constants.ts` for an applet |
 | `flow_inspect_controls` | — | Real UI controls |
 | `flow_dryrun_recipe` | — | Applies a recipe without generating |
+| `flow_edit_applet` | — | Asks an applet's tool creator for a change |
 | `flow_generate` | 0 credits | One image |
 | `flow_batch_generate` | 0 credits | Cartesian product of a matrix |
 | `flow_upscale_local` | — | Local upscale, nearest or lanczos |

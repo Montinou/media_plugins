@@ -55,6 +55,16 @@ PACE_MS = 900          # pause between interactions with controls
 PACE_RUN_S = 20        # minimum pause between consecutive runs in batch
 POLL_RESULT_S = 4      # how often to check whether the image is out yet
 
+# --- editing an applet (a different surface from operating it) -------------
+# The tool creator lives in Flow's own chrome, OUTSIDE the applet's iframe.
+# Every other method in this class works on `self.frame`; editing is the one
+# path that has to work on `self.page`. Getting this wrong looks like "the
+# control isn't there" and is really "you're looking inside the sandbox".
+EDIT_TAB_TEXTS = ("Editar", "Edit")
+CREATOR_PLACEHOLDERS = ("¿Qué quieres crear?", "What do you want to create")
+EDIT_SETTLE_S = 8      # how long the panel must sit still before it counts as done
+EDIT_TIMEOUT_S = 600   # hard ceiling: rebuilding an applet can take minutes
+
 
 
 # Flow serves every image as JPEG, from generation through its CDN. Naming the
@@ -162,6 +172,102 @@ class FlowDriver:
         )
 
     # --------------------------------------------------------------- controls
+
+    # ------------------------------------------------------------- editing
+
+    def edit_applet(
+        self,
+        applet_id: str,
+        instruction: str,
+        project_id: str | None = None,
+        timeout_s: float = EDIT_TIMEOUT_S,
+        settle_s: float = EDIT_SETTLE_S,
+    ) -> dict:
+        """Asks the tool creator for a change, then reports the REAL controls.
+
+        Returns `describe()` of the published applet on purpose — never the
+        agent's prose. Measured on a real edit: the agent answered "changes
+        made" and listed them correctly, while the editor's own preview still
+        showed the old placeholders; only reopening the published applet
+        confirmed it. Trusting the prose is exactly how a change gets reported
+        as done without anyone verifying it.
+
+        The caller still has to check that what came back is what it asked
+        for: this returns evidence, not a verdict.
+        """
+        url = applet_url(applet_id, project_id)
+        self.page.goto(url, wait_until="networkidle", timeout=90000)
+
+        # 1. the Edit tab — a button in the page, not in the iframe
+        for text in EDIT_TAB_TEXTS:
+            tab = self.page.get_by_role("button", name=re.compile(f"^{re.escape(text)}$", re.I))
+            if tab.count():
+                tab.first.click()
+                break
+        else:
+            raise RuntimeError(
+                "couldn't find the Edit tab (tried: "
+                + ", ".join(EDIT_TAB_TEXTS)
+                + "). If Flow's UI is in another language, add its label to EDIT_TAB_TEXTS."
+            )
+
+        # 2. the creator's input, also in the page
+        box = None
+        deadline = time.time() + 30
+        while time.time() < deadline and box is None:
+            for ph in CREATOR_PLACEHOLDERS:
+                cand = self.page.get_by_placeholder(re.compile(re.escape(ph), re.I))
+                if cand.count():
+                    box = cand.first
+                    break
+            if box is None:
+                self.page.wait_for_timeout(1000)
+        if box is None:
+            raise RuntimeError(
+                "couldn't find the tool creator's input (tried: "
+                + ", ".join(CREATOR_PLACEHOLDERS)
+                + "). The Edit tab may not have opened."
+            )
+
+        before = self.page.evaluate("() => document.body.innerText.length")
+        box.click()
+        box.fill(instruction)
+        box.press("Enter")
+
+        # 3. wait for the agent: the panel grows while it answers, then sits
+        #    still. There's no completion event to listen for, so stillness is
+        #    the signal — and `settle_s` has to outlast the pauses the agent
+        #    takes mid-answer.
+        grew = False
+        last_len = before
+        last_change = time.time()
+        hard_deadline = time.time() + timeout_s
+        while time.time() < hard_deadline:
+            self.page.wait_for_timeout(2000)
+            now = self.page.evaluate("() => document.body.innerText.length")
+            if now != last_len:
+                last_len, last_change = now, time.time()
+                grew = grew or now > before
+                continue
+            if grew and time.time() - last_change >= settle_s:
+                break
+        else:
+            raise TimeoutError(
+                f"the tool creator didn't finish within {timeout_s:.0f}s. "
+                "The edit may still be running in the browser; check it there "
+                "before asking again."
+            )
+        if not grew:
+            raise RuntimeError(
+                "the instruction was typed but the tool creator never answered "
+                "— it probably wasn't sent. Check whether the creator's input "
+                "still submits with Enter."
+            )
+
+        # 4. the point of the whole thing: reopen the published applet and
+        #    report what it actually exposes now.
+        self.open(applet_id, project_id=project_id)
+        return self.describe()
 
     def describe(self) -> dict:
         """Inventory of the applet's controls, for writing recipes."""

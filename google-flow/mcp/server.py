@@ -278,6 +278,62 @@ def _inspect_controls(args: dict) -> dict:
 
 
 @tool(
+    "flow_edit_applet",
+    "Asks an applet's tool creator for a change, in natural language, and "
+    "returns the applet's REAL controls afterwards. Use it to fix an applet "
+    "that automation can't drive — for example two fields sharing a "
+    "placeholder, which makes all but the first unreachable, or a control "
+    "that should be a dropdown. Takes minutes: the agent rewrites the code "
+    "and the applet recompiles in the browser. What comes back is the "
+    "published applet's controls, never the agent's prose — check them "
+    "yourself against what you asked for, because an agent reporting success "
+    "is not evidence. Generates no media and spends no credits.",
+    {
+        "properties": {
+            "applet_id": {
+                "type": "string",
+                "description": "appletId (UUID) obtained from flow_list_applets.",
+            },
+            "instruction": {
+                "type": "string",
+                "description": (
+                    "What to change, in the applet's own language. Be surgical: "
+                    "say what to change AND what to leave alone, because the "
+                    "agent rewrites code and will happily redesign more than "
+                    "you asked. Naming the reason helps it choose well."
+                ),
+            },
+            "timeout_s": {
+                "type": "number",
+                "description": "Ceiling for the agent's work. Default 600.",
+            },
+        },
+        "required": ["applet_id", "instruction"],
+    },
+    title="Edit applet",
+    readOnlyHint=False,
+    openWorldHint=True,
+)
+def _edit_applet(args: dict) -> dict:
+    with flow_driver.FlowDriver(headless=True) as drv:
+        controls = drv.edit_applet(
+            args["applet_id"],
+            args["instruction"],
+            timeout_s=float(args.get("timeout_s") or flow_driver.EDIT_TIMEOUT_S),
+        )
+    return {
+        "appletId": args["applet_id"],
+        "controls": controls,
+        "note": (
+            "These are the published applet's controls after the edit. The "
+            "agent's own summary is not included on purpose: verify the change "
+            "here, and if a label or placeholder matters to a recipe, take it "
+            "from this output."
+        ),
+    }
+
+
+@tool(
     "flow_dryrun_recipe",
     "Applies all of a recipe's controls on the applet WITHOUT firing the "
     "generation, and returns each control's final state. Verifies that "

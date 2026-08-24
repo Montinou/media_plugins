@@ -76,6 +76,41 @@ dropdown, so `set_dropdown("Modelo", …)` can reach it, and it should also appe
 on whichever tab does the bulk of the generating — not only on the first one —
 so nobody has to walk back to check what is running.
 
+## Fixing an applet you can't drive
+
+`flow_edit_applet` sends a plain-language change request to an applet's tool
+creator. It exists for the case where an applet works by hand but automation
+can't reach it — and the fix is a one-line change to the UI, not a rewrite.
+
+The failure that motivates it, measured: three reference fields all carrying
+the placeholder `mediaId...`. `fill()` locates text fields by placeholder
+fragment and takes `.first`, so fields two and three were unreachable and the
+step needing all three could not run at all. Distinct placeholders fixed it.
+
+Two things to know before using it.
+
+**Be surgical.** The agent rewrites code, and a broad request gets a broad
+rewrite. Say what to change, say what to leave alone, and say why — the reason
+is what lets it choose well when your wording doesn't cover a case:
+
+> The three mediaId fields share one placeholder. Automation locates fields by
+> placeholder text and takes the first match, so only Ref 1 is reachable.
+> Change ONLY those three placeholders to «…», «…», «…». Don't touch the
+> labels, the dropdowns, the logic, the prompts or the model.
+
+**Verify against the applet, not the answer.** The tool returns the published
+applet's controls and deliberately withholds the agent's prose. Measured on a
+real edit: the agent replied "changes made" and listed them correctly, while
+the editor's own preview still showed the old placeholders — only the
+published applet had them. An agent reporting success is not evidence, and the
+returned controls are evidence, not a verdict: compare them to what you asked
+for.
+
+Editing runs in Flow's own chrome, outside the applet's iframe. That's why it
+is the one driver path that works on the page rather than on the frame, and
+why a label that a screenshot clearly shows can still be "not found" if
+something looks for it in the wrong place.
+
 ## What's generic and what's per-account
 
 The tools work with any account. What's specific to each one —`projectId`,
@@ -167,6 +202,7 @@ resumes by calling it again.
 | Auth error | expired cookie | Ask the user to re-export `labs.google.cookies.json` |
 | `couldn't find the option X` | value not in `constants.ts` | Reread constants with `flow_get_applet_code` |
 | `couldn't find a control with label X` | label taken from the code, not the UI | Run `flow_inspect_controls` |
+| Automation can only fill the first of several fields | they share a placeholder; `fill()` takes `.first` | `flow_edit_applet` to make the placeholders distinct |
 | 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | route with cost from an automated browser | Use `cdp_url` with a real Chrome |
 | The applet didn't mount | compiles with esbuild.wasm in the browser | Raise `loadTimeoutMs`; usually takes ~30s |
 | `don't know which project to work with` | no pack and no `FLOW_PROJECT_ID` | `flow_scaffold_pack`, or set the variable |
