@@ -38,6 +38,44 @@ Evading detection is exactly what triggers the block you're trying to avoid.
 | "One stealth patch and the upscale works" | It turns a recoverable 403 into a flagged account. |
 | "The user has 234 credits, spending a few is fine" | The credits are theirs. Measure and report, don't decide for them. |
 
+## Building an applet: always give it a model selector
+
+**Never hardcode `modelDisplayName` in an applet.** Every applet you ask the
+Flow agent to build gets a model dropdown, wired to a field in the shared state
+so one choice applies to every step of the chain. Put this in the request from
+the start — retrofitting it means editing the applet in the middle of a
+production run.
+
+The reason is a failure mode you cannot diagnose from the outside. Each model
+has its own daily quota. When one runs out, the backend answers:
+
+```
+FALLO EN GENERACIÓN
+Image generation failed
+```
+
+Nothing else. The session is still valid, the credits are untouched, and the
+same prompt worked ten minutes earlier — so it is indistinguishable from a
+transient error, and the natural reaction is to retry, which is precisely what
+rule 2 tells you not to do. Measured on one account: Nano Banana Pro started
+refusing every request after ~115 images in a day; switching the dropdown to
+Nano Banana 2 generated four in a row immediately, no other change.
+
+The names go to the SDK verbatim, emoji and spacing included:
+
+```js
+const MODEL_OPTIONS = [
+  '🍌 Nano Banana Pro',
+  '🍌 Nano Banana 2',
+  '🍌 Nano Banana 2 Lite'
+];
+```
+
+Two details that make the selector usable from automation: it has to be a real
+dropdown, so `set_dropdown("Modelo", …)` can reach it, and it should also appear
+on whichever tab does the bulk of the generating — not only on the first one —
+so nobody has to walk back to check what is running.
+
 ## What's generic and what's per-account
 
 The tools work with any account. What's specific to each one —`projectId`,
