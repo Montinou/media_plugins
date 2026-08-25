@@ -62,6 +62,7 @@ POLL_RESULT_S = 4      # how often to check whether the image is out yet
 # control isn't there" and is really "you're looking inside the sandbox".
 EDIT_TAB_TEXTS = ("Editar", "Edit")
 CREATOR_PLACEHOLDERS = ("¿Qué quieres crear?", "What do you want to create")
+CREATOR_SEND_BUTTONS = ("arrow_forward", "send", "Enviar", "Send")
 EDIT_SETTLE_S = 8      # how long the panel must sit still before it counts as done
 EDIT_TIMEOUT_S = 600   # hard ceiling: rebuilding an applet can take minutes
 
@@ -232,7 +233,20 @@ class FlowDriver:
         before = self.page.evaluate("() => document.body.innerText.length")
         box.click()
         box.fill(instruction)
-        box.press("Enter")
+
+        # Enter does NOT submit this box — measured: the instruction sat typed
+        # in the field, the agent never answered, and the run looked like a
+        # timeout with no error. The send button is what submits, so click it
+        # and keep Enter only as a fallback.
+        sent = False
+        for name in CREATOR_SEND_BUTTONS:
+            btn = self.page.get_by_role("button", name=re.compile(re.escape(name), re.I))
+            if btn.count():
+                btn.first.click()
+                sent = True
+                break
+        if not sent:
+            box.press("Enter")
 
         # 3. wait for the agent: the panel grows while it answers, then sits
         #    still. There's no completion event to listen for, so stillness is

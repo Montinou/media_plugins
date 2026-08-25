@@ -98,6 +98,12 @@ is what lets it choose well when your wording doesn't cover a case:
 > Change ONLY those three placeholders to «…», «…», «…». Don't touch the
 > labels, the dropdowns, the logic, the prompts or the model.
 
+**The send button submits; Enter does not.** Measured: the instruction sat
+typed in the box, the agent never answered, and the whole thing looked like a
+timeout with no error — the same silent shape as a real failure. If an edit
+comes back with the applet unchanged, check that the request actually reached
+the chat before assuming the agent ignored it.
+
 **Verify against the applet, not the answer.** The tool returns the published
 applet's controls and deliberately withholds the agent's prose. Measured on a
 real edit: the agent replied "changes made" and listed them correctly, while
