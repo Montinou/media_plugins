@@ -377,8 +377,12 @@ def _dryrun(args: dict) -> dict:
     "flow_generate",
     "Generates ONE image by running an applet with the recipe's controls, "
     "and saves it as a PNG. Returns the path, the dimensions, the mediaId, "
-    "and the credit cost measured before/after. For several variants use "
-    "flow_batch_generate, which reuses a single browser session.",
+    "the referenceId, and the credit cost measured before/after. "
+    "**To feed this image to a later step, use `referenceId`, not `mediaId`** "
+    "— they are the same id, but anything taking an image as a reference wants "
+    "the `fe_id_` spelling, and the bare UUID fails as a silent timeout rather "
+    "than an error. For several variants use flow_batch_generate, which reuses "
+    "a single browser session.",
     {
         "properties": {
             "recipe": {

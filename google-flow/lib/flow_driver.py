@@ -60,6 +60,29 @@ POLL_RESULT_S = 4      # how often to check whether the image is out yet
 # Every other method in this class works on `self.frame`; editing is the one
 # path that has to work on `self.page`. Getting this wrong looks like "the
 # control isn't there" and is really "you're looking inside the sandbox".
+# --- media ids -------------------------------------------------------------
+# A generation returns a bare UUID, but every place that TAKES an image as a
+# reference wants that same UUID with a `fe_id_` prefix. They are the same id;
+# only the spelling differs. Passing the bare UUID does not error in any useful
+# way — the applet reports "Reference image with ID ... not found or not ready"
+# and the run just sits there until it times out.
+#
+# That is why every result carries `referenceId` already spelled correctly:
+# nobody should have to remember this.
+MEDIA_REF_PREFIX = "fe_id_"
+
+
+def reference_id(media_id: str | None) -> str | None:
+    """The id spelled the way `referenceImageMediaIds` wants it."""
+    if not media_id:
+        return None
+    return (
+        media_id
+        if media_id.startswith(MEDIA_REF_PREFIX)
+        else f"{MEDIA_REF_PREFIX}{media_id}"
+    )
+
+
 EDIT_TAB_TEXTS = ("Editar", "Edit")
 CREATOR_PLACEHOLDERS = ("¿Qué quieres crear?", "What do you want to create")
 CREATOR_SEND_BUTTONS = ("arrow_forward", "send", "Enviar", "Send")
@@ -473,6 +496,7 @@ class FlowDriver:
                     "width": got["w"],
                     "height": got["h"],
                     "mediaId": self.last_media_id(),
+                    "referenceId": reference_id(self.last_media_id()),
                 }
             err = self.frame.evaluate("""() => {
                 const el = Array.from(document.querySelectorAll('*')).find(e =>
@@ -586,7 +610,10 @@ def run_recipe(recipe: dict, out_dir: Path, headless: bool) -> dict:
         drv.click(recipe["generateButton"])
 
         result = drv.wait_for_image(timeout=recipe.get("generateTimeoutSec", 300))
-        print(f"→ image {result['width']}x{result['height']} mediaId={result['mediaId']}")
+        print(
+            f"→ image {result['width']}x{result['height']} "
+            f"mediaId={result['mediaId']} ref={result.get('referenceId')}"
+        )
 
         after_gen = credits_balance()
         cost = (before - after_gen) if (before is not None and after_gen is not None) else None
@@ -605,6 +632,7 @@ def run_recipe(recipe: dict, out_dir: Path, headless: bool) -> dict:
             "width": result["width"],
             "height": result["height"],
             "mediaId": result["mediaId"],
+            "referenceId": result.get("referenceId"),
             "file": raw.name,
             "credits": {"before": before, "afterGenerate": after_gen, "cost": cost},
         }
@@ -715,6 +743,7 @@ def run_batch(
                     "width": res["width"],
                     "height": res["height"],
                     "mediaId": res["mediaId"],
+                    "referenceId": res.get("referenceId"),
                     "mimeType": res["mimeType"],
                 }
                 results.append(entry)

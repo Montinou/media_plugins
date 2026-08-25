@@ -25,7 +25,9 @@
         "sprites",
         "playwright",
         "mcp",
-        "gamedev"
+        "gamedev",
+        "applets",
+        "automation"
       ]
     },
     {

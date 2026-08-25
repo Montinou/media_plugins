@@ -1,6 +1,6 @@
 ---
 name: flow-assets
-description: Use when generating assets with Google Labs Flow — sprites, character turnarounds, map layers, dioramas — or when working with Flow applets, recipes, packs, appletId, projectId, or labs.google tools
+description: Use when generating assets with Google Labs Flow — sprites, character turnarounds, map layers, dioramas — or when working with recipes, packs, appletId, projectId, credits, or labs.google tools. For building or editing an applet itself, see flow-applets
 ---
 
 # Generating assets with Google Labs Flow
@@ -38,84 +38,13 @@ Evading detection is exactly what triggers the block you're trying to avoid.
 | "One stealth patch and the upscale works" | It turns a recoverable 403 into a flagged account. |
 | "The user has 234 credits, spending a few is fine" | The credits are theirs. Measure and report, don't decide for them. |
 
-## Building an applet: always give it a model selector
+## Building or fixing an applet
 
-**Never hardcode `modelDisplayName` in an applet.** Every applet you ask the
-Flow agent to build gets a model dropdown, wired to a field in the shared state
-so one choice applies to every step of the chain. Put this in the request from
-the start — retrofitting it means editing the applet in the middle of a
-production run.
-
-The reason is a failure mode you cannot diagnose from the outside. Each model
-has its own daily quota. When one runs out, the backend answers:
-
-```
-FALLO EN GENERACIÓN
-Image generation failed
-```
-
-Nothing else. The session is still valid, the credits are untouched, and the
-same prompt worked ten minutes earlier — so it is indistinguishable from a
-transient error, and the natural reaction is to retry, which is precisely what
-rule 2 tells you not to do. Measured on one account: Nano Banana Pro started
-refusing every request after ~115 images in a day; switching the dropdown to
-Nano Banana 2 generated four in a row immediately, no other change.
-
-The names go to the SDK verbatim, emoji and spacing included:
-
-```js
-const MODEL_OPTIONS = [
-  '🍌 Nano Banana Pro',
-  '🍌 Nano Banana 2',
-  '🍌 Nano Banana 2 Lite'
-];
-```
-
-Two details that make the selector usable from automation: it has to be a real
-dropdown, so `set_dropdown("Modelo", …)` can reach it, and it should also appear
-on whichever tab does the bulk of the generating — not only on the first one —
-so nobody has to walk back to check what is running.
-
-## Fixing an applet you can't drive
-
-`flow_edit_applet` sends a plain-language change request to an applet's tool
-creator. It exists for the case where an applet works by hand but automation
-can't reach it — and the fix is a one-line change to the UI, not a rewrite.
-
-The failure that motivates it, measured: three reference fields all carrying
-the placeholder `mediaId...`. `fill()` locates text fields by placeholder
-fragment and takes `.first`, so fields two and three were unreachable and the
-step needing all three could not run at all. Distinct placeholders fixed it.
-
-Two things to know before using it.
-
-**Be surgical.** The agent rewrites code, and a broad request gets a broad
-rewrite. Say what to change, say what to leave alone, and say why — the reason
-is what lets it choose well when your wording doesn't cover a case:
-
-> The three mediaId fields share one placeholder. Automation locates fields by
-> placeholder text and takes the first match, so only Ref 1 is reachable.
-> Change ONLY those three placeholders to «…», «…», «…». Don't touch the
-> labels, the dropdowns, the logic, the prompts or the model.
-
-**The send button submits; Enter does not.** Measured: the instruction sat
-typed in the box, the agent never answered, and the whole thing looked like a
-timeout with no error — the same silent shape as a real failure. If an edit
-comes back with the applet unchanged, check that the request actually reached
-the chat before assuming the agent ignored it.
-
-**Verify against the applet, not the answer.** The tool returns the published
-applet's controls and deliberately withholds the agent's prose. Measured on a
-real edit: the agent replied "changes made" and listed them correctly, while
-the editor's own preview still showed the old placeholders — only the
-published applet had them. An agent reporting success is not evidence, and the
-returned controls are evidence, not a verdict: compare them to what you asked
-for.
-
-Editing runs in Flow's own chrome, outside the applet's iframe. That's why it
-is the one driver path that works on the page rather than on the frame, and
-why a label that a screenshot clearly shows can still be "not found" if
-something looks for it in the wrong place.
+That lives in the **flow-applets** skill: which controls a recipe can reach,
+how to chain steps, the model selector every applet needs, and the failures
+that look like nothing at all. Read it before asking the tool creator for
+anything — an applet that works by hand can be impossible to drive, and
+retrofitting means editing it mid-run.
 
 ## What's generic and what's per-account
 
@@ -132,7 +61,6 @@ applet fail on purpose: the plugin doesn't ship anyone's project hardcoded.
 ```
 flow_session_status        does the cookie still work? how many credits are there?
 flow_pack_info             what tools and recipes are available?
-upload the references    once, to the project library — recipes need library ids
 flow_dryrun_recipe         verify the recipe, zero cost
 flow_batch_generate        with limit 2-3 first, then the full batch
 flow_upscale_local         nearest x2 for pixel art
@@ -179,45 +107,32 @@ Native 2K only makes sense for **painted art** (backgrounds, dioramas),
 where interpolation works in your favor. There it requires `cdp_url` and
 spends credits: ask the user for confirmation before calling it.
 
-## Reference images: from the library, never from a previous run
+## Media ids: `mediaId` and `fe_id_<uuid>` are the same id
 
-**Semi-mandatory step.** Any image an applet uses as a reference across runs
-has to live in the project's media library — uploaded, or picked with
-`Flow.media.select`. Upload it once, note its mediaId, and put that in the
-recipe.
+**Read this before wiring any step that feeds an image into another one.**
 
-The trap, measured: `flow_generate` returns a `mediaId`, and it looks like a
-perfectly good handle to feed the next step. It is not. Images generated
-inside an applet are **never registered in the project library** (verified by
-looking at it), and their id dies with the browser session that made them.
-Every automated run opens a fresh session, so chaining step 1's output into
-step 2 fails every time with:
+A generation returns a bare UUID as `mediaId`. Everything that TAKES an image
+as a reference — `referenceImageMediaIds`, an applet's reference field — wants
+that same UUID spelled `fe_id_<uuid>`. Same id, different spelling.
 
 ```
-Reference image with ID <uuid> not found or not ready
+mediaId      55019664-7e03-43b2-8ad8-9b5d041d80ed
+referenceId  fe_id_55019664-7e03-43b2-8ad8-9b5d041d80ed   ← what a reference takes
 ```
 
-Worse, that message contains none of the words the driver watches for, so the
-run does not report an error — it sits until the generation timeout and looks
-exactly like a slow model. Two runs were lost to it before the cause was found
-by driving the applet by hand and reading the error off the screen.
+`flow_generate` and `flow_batch_generate` already return `referenceId` spelled
+correctly. **Use it and never build the string by hand.**
 
-Two consequences worth internalizing:
+Why this one is worth a section: the bare UUID does not fail loudly. The applet
+reports `Reference image with ID ... not found or not ready`, which contains
+none of the words the driver watches for, so the run neither errors nor returns
+— it sits until the generation timeout and looks exactly like a slow model.
+Two runs were lost to it, and the wrong conclusion drawn from it (that ids die
+with their session) sent a whole redesign down the wrong path before someone
+who remembered the prefix said so. It is a missing prefix, nothing more.
 
-- **An applet that needs its own previous output must chain in-session.** Do
-  the whole sequence inside one generation and return a single composite
-  image; the driver captures one image per run, so a strip is what survives.
-  A library round-trip is for references that are *external* to the chain.
-- **A style reference is external, so it belongs in the library.** Upload it
-  once and hardcode its mediaId. Leaving it out is not a small loss: without
-  an example of a correctly isolated layer, the model returns the whole map
-  instead of the layer — measured, a roads layer came back at 0.76 coverage
-  carrying every building and wall, and the coverage ceiling caught it.
-
-When an applet takes a reference, give it both doors: a text field holding a
-mediaId (which automation fills) and a library picker beside it (which a human
-uses, and which writes the id into that same field). The picker alone is
-unreachable by a recipe; the field alone makes a person hunt for a uuid.
+Uploaded library images use the same spelling, so a style reference picked from
+the library and a layer you just generated are interchangeable as references.
 
 ## Recipes
 
@@ -250,7 +165,7 @@ resumes by calling it again.
 | `couldn't find the option X` | value not in `constants.ts` | Reread constants with `flow_get_applet_code` |
 | `couldn't find a control with label X` | label taken from the code, not the UI | Run `flow_inspect_controls` |
 | Automation can only fill the first of several fields | they share a placeholder; `fill()` takes `.first` | `flow_edit_applet` to make the placeholders distinct |
-| A run with reference images times out with no error | a generated `mediaId` used across sessions — the applet says "not found or not ready", which the driver doesn't recognize as an error | Put the reference in the library and use that id (see Reference images) |
+| A run with reference images times out with no error | the bare UUID was passed where a reference goes; it needs the `fe_id_` prefix | Use the `referenceId` that the generation returned (see Media ids) |
 | 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | route with cost from an automated browser | Use `cdp_url` with a real Chrome |
 | The applet didn't mount | compiles with esbuild.wasm in the browser | Raise `loadTimeoutMs`; usually takes ~30s |
 | `don't know which project to work with` | no pack and no `FLOW_PROJECT_ID` | `flow_scaffold_pack`, or set the variable |
@@ -258,6 +173,7 @@ resumes by calling it again.
 
 ## References
 
+- the **flow-applets** skill — building and editing applets an automation can drive
 - `references/recipes.md` — recipe schema and how `matrix` works
 - `references/api-map.md` — endpoints, two-hop auth, what reCAPTCHA protects
 - the plugin's `packs/README.md` — what's specific to each account and how to generate a pack
