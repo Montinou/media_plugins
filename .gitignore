@@ -15,10 +15,12 @@
 !*/packs/_template/
 !*/packs/_template/**
 
-# Generation outputs
-flow-out/
-flow-applets/
-work/
+# Generation outputs — anclados a la raíz: sin la barra inicial, la regla
+# `flow-applets/` también se comía google-flow/skills/flow-applets/, que es
+# una skill y sí se versiona.
+/flow-out/
+/flow-applets/
+/work/
 
 # Python
 __pycache__/
