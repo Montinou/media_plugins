@@ -132,6 +132,7 @@ applet fail on purpose: the plugin doesn't ship anyone's project hardcoded.
 ```
 flow_session_status        does the cookie still work? how many credits are there?
 flow_pack_info             what tools and recipes are available?
+upload the references    once, to the project library — recipes need library ids
 flow_dryrun_recipe         verify the recipe, zero cost
 flow_batch_generate        with limit 2-3 first, then the full batch
 flow_upscale_local         nearest x2 for pixel art
@@ -178,6 +179,46 @@ Native 2K only makes sense for **painted art** (backgrounds, dioramas),
 where interpolation works in your favor. There it requires `cdp_url` and
 spends credits: ask the user for confirmation before calling it.
 
+## Reference images: from the library, never from a previous run
+
+**Semi-mandatory step.** Any image an applet uses as a reference across runs
+has to live in the project's media library — uploaded, or picked with
+`Flow.media.select`. Upload it once, note its mediaId, and put that in the
+recipe.
+
+The trap, measured: `flow_generate` returns a `mediaId`, and it looks like a
+perfectly good handle to feed the next step. It is not. Images generated
+inside an applet are **never registered in the project library** (verified by
+looking at it), and their id dies with the browser session that made them.
+Every automated run opens a fresh session, so chaining step 1's output into
+step 2 fails every time with:
+
+```
+Reference image with ID <uuid> not found or not ready
+```
+
+Worse, that message contains none of the words the driver watches for, so the
+run does not report an error — it sits until the generation timeout and looks
+exactly like a slow model. Two runs were lost to it before the cause was found
+by driving the applet by hand and reading the error off the screen.
+
+Two consequences worth internalizing:
+
+- **An applet that needs its own previous output must chain in-session.** Do
+  the whole sequence inside one generation and return a single composite
+  image; the driver captures one image per run, so a strip is what survives.
+  A library round-trip is for references that are *external* to the chain.
+- **A style reference is external, so it belongs in the library.** Upload it
+  once and hardcode its mediaId. Leaving it out is not a small loss: without
+  an example of a correctly isolated layer, the model returns the whole map
+  instead of the layer — measured, a roads layer came back at 0.76 coverage
+  carrying every building and wall, and the coverage ceiling caught it.
+
+When an applet takes a reference, give it both doors: a text field holding a
+mediaId (which automation fills) and a library picker beside it (which a human
+uses, and which writes the id into that same field). The picker alone is
+unreachable by a recipe; the field alone makes a person hunt for a uuid.
+
 ## Recipes
 
 A recipe describes how to drive an applet's controls. Full schema, your
@@ -209,6 +250,7 @@ resumes by calling it again.
 | `couldn't find the option X` | value not in `constants.ts` | Reread constants with `flow_get_applet_code` |
 | `couldn't find a control with label X` | label taken from the code, not the UI | Run `flow_inspect_controls` |
 | Automation can only fill the first of several fields | they share a placeholder; `fill()` takes `.first` | `flow_edit_applet` to make the placeholders distinct |
+| A run with reference images times out with no error | a generated `mediaId` used across sessions — the applet says "not found or not ready", which the driver doesn't recognize as an error | Put the reference in the library and use that id (see Reference images) |
 | 403 `PUBLIC_ERROR_UNUSUAL_ACTIVITY` | route with cost from an automated browser | Use `cdp_url` with a real Chrome |
 | The applet didn't mount | compiles with esbuild.wasm in the browser | Raise `loadTimeoutMs`; usually takes ~30s |
 | `don't know which project to work with` | no pack and no `FLOW_PROJECT_ID` | `flow_scaffold_pack`, or set the variable |
