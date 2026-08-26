@@ -222,13 +222,24 @@ class FlowDriver:
         url = applet_url(applet_id, project_id)
         self.page.goto(url, wait_until="networkidle", timeout=90000)
 
-        # 1. the Edit tab — a button in the page, not in the iframe
+        # 1. the Edit tab — in the page, not in the iframe. Flow renders it with
+        #    role="tab", but that has changed before, so try both and fall back
+        #    to plain text rather than failing on a role.
+        clicked = False
         for text in EDIT_TAB_TEXTS:
-            tab = self.page.get_by_role("button", name=re.compile(f"^{re.escape(text)}$", re.I))
-            if tab.count():
-                tab.first.click()
+            exact = re.compile(f"^{re.escape(text)}$", re.I)
+            for locator in (
+                self.page.get_by_role("tab", name=exact),
+                self.page.get_by_role("button", name=exact),
+                self.page.get_by_text(exact),
+            ):
+                if locator.count():
+                    locator.first.click()
+                    clicked = True
+                    break
+            if clicked:
                 break
-        else:
+        if not clicked:
             raise RuntimeError(
                 "couldn't find the Edit tab (tried: "
                 + ", ".join(EDIT_TAB_TEXTS)

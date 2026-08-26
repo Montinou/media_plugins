@@ -91,6 +91,7 @@ these produce it.
 | An edit request seems ignored | the creator's box does not submit on Enter — the send button does |
 | `FALLO EN GENERACIÓN` and nothing more | that model's daily quota is gone; switch the model dropdown |
 | The applet "didn't mount" | it compiles with esbuild.wasm in the browser; ~30s is normal, raise `loadTimeoutMs` |
+| `flow_edit_applet` can't find the creator's input | the creator panel may start collapsed in a fresh session; open it in the browser, or make the change by hand |
 
 ## Verify against the applet, never against the answer
 
